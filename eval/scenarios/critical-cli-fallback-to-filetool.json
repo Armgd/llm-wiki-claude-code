@@ -1,0 +1,18 @@
+{
+	"name": "Skills fall back to file tools when both CLI and MCP are unavailable",
+	"skills": ["wiki-query"],
+	"query": "Neither Obsidian CLI nor MCP server is available. Run /llm-wiki:wiki-query \"What deployment patterns do we use?\" using the wiki at /tmp/test-vault with a pre-populated schema.",
+	"expected_behavior": [
+		"The skill probes CLI — unavailable",
+		"The skill probes MCP — unavailable",
+		"The skill uses Grep, Glob, and Read to search and read vault files directly",
+		"The user-facing report notes the fallback"
+	],
+	"success_criteria": [
+		"Output mentions using file tools as fallback",
+		"The query uses Grep or Glob to search the vault",
+		"The query uses Read to read matching notes",
+		"A synthesized answer is still produced"
+	],
+	"mode": "llm_judge"
+}

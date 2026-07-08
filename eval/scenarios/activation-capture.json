@@ -1,0 +1,20 @@
+{
+	"name": "Clean trigger — wiki-capture activates for end-of-session knowledge capture",
+	"skills": ["wiki-capture"],
+	"query": "We just finished debugging that cache-invalidation issue. Capture this session into my wiki before we wrap up.",
+	"expected_behavior": [
+		"Route to wiki-capture skill",
+		"Read the setup bootstrap from references/setup.md before proceeding",
+		"Look for a per-session change manifest at /tmp/wiki-session-changes.*",
+		"Resolve the vault path from ~/.config/llm-wiki/vault",
+		"Plan a session log under {folders.projects} using the schema's session-log page type",
+		"Use [[wikilinks]] for cross-references"
+	],
+	"success_criteria": [
+		"References the wiki-capture skill or /llm-wiki:wiki-capture command",
+		"Mentions reading ~/.config/llm-wiki/vault or running wiki-configure first",
+		"Plans to write a session log with Decisions, Findings, State, Next Steps sections",
+		"Uses wikilink syntax [[...]] for citations"
+	],
+	"mode": "string_match"
+}

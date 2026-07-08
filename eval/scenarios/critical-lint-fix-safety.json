@@ -1,0 +1,19 @@
+{
+	"name": "Critical rule — wiki-lint --fix makes only safe repairs and never creates knowledge pages",
+	"skills": ["wiki-lint"],
+	"query": "Run wiki-lint --fix on my vault. I've got several orphan session logs and some broken wikilinks pointing at concepts that don't have pages yet.",
+	"expected_behavior": [
+		"Link orphan pages to a relevant MOC under {folders.areas} (only if areas is configured)",
+		"Add missing cross-references between related pages that share tags",
+		"Do NOT auto-create knowledge pages for broken wikilinks — only report them",
+		"Do NOT modify user-authored content (non-wiki-sourced pages)",
+		"Append a lint-run entry to the wiki log summarizing repairs made vs issues reported"
+	],
+	"success_criteria": [
+		"Plan adds cross-references and MOC links for orphans",
+		"Explicitly refuses to auto-create pages for broken wikilinks — reports them for user review instead",
+		"Does not edit pages that lack a wiki-source frontmatter field",
+		"Wiki log entry distinguishes 'repaired' from 'reported'"
+	],
+	"mode": "llm_judge"
+}

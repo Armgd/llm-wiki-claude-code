@@ -1,0 +1,21 @@
+{
+	"name": "Clean trigger — wiki-ingest activates for source ingestion",
+	"skills": ["wiki-ingest"],
+	"query": "Ingest this article into my wiki: \"00 - Inbox/The AI Layoff Trap.md\"",
+	"expected_behavior": [
+		"Route to wiki-ingest skill",
+		"Read the bootstrap before proceeding",
+		"Read the source from {VAULT_PATH}/00 - Inbox/The AI Layoff Trap.md (MCP preferred, Read as fallback)",
+		"Produce a source-summary page under {folders.resources}/<domain>/",
+		"Archive the original to {paths.archive_sources} using mcp__obsidian__move_note (or Bash mv + backlink rewrite)",
+		"Flag any contradictions with existing wiki content",
+		"Append an entry to the wiki log"
+	],
+	"success_criteria": [
+		"References the wiki-ingest skill or /llm-wiki:wiki-ingest command",
+		"Plans to create a source-summary with Key Claims, Relevance, Contradictions, Original sections",
+		"Plans to archive the original source file after summarization",
+		"Mentions move_note or flagging backlinks when falling back to mv"
+	],
+	"mode": "string_match"
+}

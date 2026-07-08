@@ -1,0 +1,20 @@
+{
+	"name": "Clean trigger — wiki-query activates for a wiki lookup",
+	"skills": ["wiki-query"],
+	"query": "What does my wiki say about container networking approaches?",
+	"expected_behavior": [
+		"Route to wiki-query skill",
+		"Run bootstrap from references/setup.md",
+		"Search the vault (MCP preferred, Grep as fallback)",
+		"Synthesize an answer combining multiple pages",
+		"Cite sources with [[wikilinks]] inline",
+		"Offer to file substantial answers back as a knowledge page"
+	],
+	"success_criteria": [
+		"References the wiki-query skill or /llm-wiki:wiki-query command",
+		"Plans to search the vault for 'container networking' via mcp__obsidian__search_notes or Grep",
+		"Output includes [[wikilinks]] as citations",
+		"Mentions offering to file the answer as a knowledge page if substantial"
+	],
+	"mode": "string_match"
+}

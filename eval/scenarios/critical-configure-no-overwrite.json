@@ -1,0 +1,21 @@
+{
+	"name": "Critical rule — reconfigure never overwrites user-edited templates or existing wiki-log",
+	"skills": ["wiki-configure"],
+	"query": "I ran wiki-configure a month ago and I've since edited _System/Templates/Session Log.md to match my team's format. I also have a populated _System/wiki-log.md. Re-run the configure flow to update the folder mapping without clobbering those.",
+	"expected_behavior": [
+		"Detect the existing configuration (reconfigure flow, not first-time)",
+		"Diff the existing wiki-schema.md Vault Configuration section against the proposed changes",
+		"Ask the user to confirm before writing the new schema",
+		"Never re-copy Templates/* files if they already exist — only seed missing ones",
+		"Never overwrite {vault}/_System/wiki-log.md if it exists",
+		"Report 'No changes — configuration already matches.' and exit if nothing differs"
+	],
+	"success_criteria": [
+		"Flow detects this is a reconfigure (not first-time)",
+		"Presents a diff of the schema changes before writing",
+		"Explicitly skips overwriting existing Templates/Session Log.md",
+		"Explicitly skips overwriting existing _System/wiki-log.md",
+		"Requires user confirmation before applying changes"
+	],
+	"mode": "llm_judge"
+}

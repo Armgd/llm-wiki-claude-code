@@ -1,0 +1,19 @@
+{
+	"name": "Critical rule — bootstrap aborts cleanly when vault is unconfigured",
+	"skills": ["wiki-capture"],
+	"query": "Capture this session to my wiki. (Assume ~/.config/llm-wiki/vault does not exist and the vault has never been configured.)",
+	"expected_behavior": [
+		"Read references/setup.md",
+		"Discover ~/.config/llm-wiki/vault is missing",
+		"Abort with the message: 'llm-wiki vault not configured — run /llm-wiki:wiki-configure first.'",
+		"Do NOT guess a vault path",
+		"Do NOT create any files",
+		"Do NOT attempt fallback MCP probes once the bootstrap has aborted"
+	],
+	"success_criteria": [
+		"Output contains the message 'llm-wiki vault not configured' or instructs the user to run /llm-wiki:wiki-configure",
+		"Does not write any files in this turn",
+		"Does not guess a default vault path like ~/Documents/ObsidianVault without explicit user approval"
+	],
+	"mode": "string_match"
+}

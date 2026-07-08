@@ -1,0 +1,20 @@
+{
+	"name": "Critical rule — ingest archives source and preserves backlinks (MCP preferred, mv+rewrite fallback)",
+	"skills": ["wiki-ingest"],
+	"query": "Ingest \"00 - Inbox/Great AI Debate.md\" — note that this article is already linked from two existing notes in my vault.",
+	"expected_behavior": [
+		"Produce the source-summary page under {folders.resources}/<domain>/",
+		"Move the original source into {paths.archive_sources}",
+		"Prefer mcp__obsidian__move_note because it updates backlinks automatically",
+		"If MCP is unavailable, use Bash mv AND rewrite inbound [[wikilinks]] to point at the archive path",
+		"Flag any backlink that cannot be cleanly rewritten in the wiki log",
+		"Never leave dangling [[Great AI Debate]] references pointing at 00 - Inbox/ after archive"
+	],
+	"success_criteria": [
+		"Plan archives the original to _System/Archive/Sources/ (or whatever paths.archive_sources resolves to)",
+		"Uses mcp__obsidian__move_note when MCP is available, explicitly for backlink preservation",
+		"On the mv fallback, the plan rewrites inbound wikilinks to the new location (not just renames the file)",
+		"Wiki log entry records the archive location and any backlinks that needed rewriting"
+	],
+	"mode": "llm_judge"
+}

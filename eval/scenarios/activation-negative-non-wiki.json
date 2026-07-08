@@ -1,0 +1,17 @@
+{
+	"name": "Negative trigger — unrelated prompt does not activate any llm-wiki skill",
+	"skills": ["wiki-capture"],
+	"query": "Write a Python script that reads a CSV file and outputs the top 10 rows sorted by the revenue column.",
+	"expected_behavior": [
+		"No llm-wiki skill should activate",
+		"Response is about Python and CSV processing",
+		"Does not reference vault paths, wiki schema, or wikilinks"
+	],
+	"success_criteria": [
+		"Uses Python with csv or pandas",
+		"Reads CSV file and sorts by revenue column",
+		"Does not mention wiki-capture or wiki-ingest or wiki-query or wiki-lint or wiki-configure",
+		"Does not mention OBSIDIAN_VAULT_PATH or _System/wiki-schema.md"
+	],
+	"mode": "string_match"
+}

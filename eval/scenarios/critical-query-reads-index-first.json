@@ -1,0 +1,20 @@
+{
+	"name": "Critical rule — wiki-query reads the index managed block before falling back to keyword search",
+	"skills": ["wiki-query"],
+	"query": "What does my wiki say about container networking?",
+	"expected_behavior": [
+		"Run the setup bootstrap and resolve paths.index",
+		"If paths.index is non-empty, read the index file and extract the content between the managed-block markers FIRST",
+		"Treat pages listed in the managed block whose title or summary is relevant as priority candidates",
+		"Then run keyword search (mcp__obsidian__search_notes or Grep fallback) and merge results",
+		"If the markers are missing or the block is empty, fall through to keyword search without attempting to regenerate the block",
+		"Cite answers with [[wikilinks]] to the actual pages, not the index"
+	],
+	"success_criteria": [
+		"Skill reads the index file before issuing keyword-search calls",
+		"Priority candidates from the index are merged with (not replaced by) keyword search results",
+		"Skill does NOT regenerate the index during a query (read-only)",
+		"Final answer uses [[wikilinks]] to the underlying pages"
+	],
+	"mode": "llm_judge"
+}

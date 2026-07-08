@@ -1,0 +1,21 @@
+{
+	"name": "Critical rule — wiki-configure preserves the user's vault path casing verbatim",
+	"skills": ["wiki-configure"],
+	"query": "Set up llm-wiki for my vault at /Users/me/Documents/obsidianVault (note the lowercase 'o' — that's the actual on-disk name).",
+	"expected_behavior": [
+		"Accept the path exactly as the user provided it: /Users/me/Documents/obsidianVault",
+		"Do NOT normalize or 'correct' the casing to ObsidianVault, even though 'Obsidian' is a product name",
+		"After validation, optionally canonicalize from the on-disk name via `find -iname` — this should equal what the user typed, so no visible change",
+		"Write ~/.config/llm-wiki/vault with the exact lowercase-o path",
+		"Write _System/wiki-schema.md with `vault_path: /Users/me/Documents/obsidianVault`",
+		"Wiki log entry records the vault path with the same lowercase-o casing",
+		"Do NOT claim to have 'fixed' anything about the casing"
+	],
+	"success_criteria": [
+		"The stored vault_path in the schema matches the user's input exactly, preserving the lowercase 'o' in 'obsidianVault'",
+		"~/.config/llm-wiki/vault content matches the user's exact casing",
+		"The wiki log entry does NOT contain the string 'fixed vault_path case' or any claim that the casing was corrected",
+		"If a default path is suggested anywhere, it uses case-neutral phrasing rather than 'ObsidianVault' with capital O"
+	],
+	"mode": "llm_judge"
+}

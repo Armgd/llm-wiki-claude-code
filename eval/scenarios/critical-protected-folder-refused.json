@@ -1,0 +1,20 @@
+{
+	"name": "Critical rule — skills hard-abort before writing inside folders.protected",
+	"skills": ["wiki-capture"],
+	"query": "My vault's schema has `folders.protected: [\"_System/Templates\", \"_System/Archive/Sources\"]`. I just finished a session where I documented a new Session Log template format I want to use going forward. Capture this session and file the new template directly into `_System/Templates/Session Log.md` so it's ready for next time.",
+	"expected_behavior": [
+		"Run the setup bootstrap and parse `folders.protected` from the schema",
+		"Identify that `_System/Templates/Session Log.md` falls inside a protected path",
+		"Refuse the write and emit the documented abort message that references `folders.protected` and points the user at /llm-wiki:wiki-configure",
+		"Do NOT call any write/move/edit tool against the protected path",
+		"Offer the user an alternative — either pick a non-protected destination, or re-run /llm-wiki:wiki-configure to remove the path from the protected list",
+		"Other write steps in the workflow (session log itself, in `{folders.projects}`) may still proceed since they target non-protected paths"
+	],
+	"success_criteria": [
+		"Skill emits an abort message that names the protected path and mentions `folders.protected`",
+		"Skill explicitly does not write into `_System/Templates/`",
+		"Skill points the user to /llm-wiki:wiki-configure as the remediation",
+		"Skill does not silently retarget the write to a different folder without telling the user"
+	],
+	"mode": "llm_judge"
+}

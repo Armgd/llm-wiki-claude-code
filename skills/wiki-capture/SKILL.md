@@ -1,0 +1,100 @@
+---
+name: wiki-capture
+description: Use this skill to capture session knowledge into an Obsidian-based LLM wiki. Triggers when the user runs the /llm-wiki:wiki-capture slash command, asks to "capture this session", "file this session into the wiki", or similar end-of-session knowledge persistence requests. Produces a session log in the vault plus optional knowledge page creation and enrichments.
+argument-hint: "[project-name]"
+allowed-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__obsidian__search_notes, mcp__obsidian__read_note, mcp__obsidian__read_multiple_notes, mcp__obsidian__write_note, mcp__obsidian__patch_note, mcp__obsidian__update_frontmatter, mcp__obsidian__get_frontmatter, mcp__obsidian__list_directory, mcp__obsidian__get_notes_info
+---
+
+# /llm-wiki:wiki-capture
+
+Extract and file knowledge from the current session into the user's Obsidian vault.
+
+## Bootstrap (required)
+
+Read `${CLAUDE_PLUGIN_ROOT}/references/setup.md` in full and follow it before proceeding. It tells you how to resolve the vault path, read and parse the schema, and handle optional folder roles. Do not proceed with capture until bootstrap succeeds; if it aborts, propagate its message to the user and stop.
+
+## Arguments
+
+Optional project name (e.g. `/llm-wiki:wiki-capture kota`). If omitted, infer from the current working directory or ask the user.
+
+## Workflow
+
+1. **Bootstrap** — run the setup bootstrap above. This gives you `VAULT_PATH`, `WIKI_SOURCE`, `folders.*` (including `folders.protected`), `paths.*`, and `io.*`. Any write step below must first check the target against `folders.protected` per §Protected paths in `references/setup.md`.
+
+   **Probe I/O backend** — run via Bash:
+   ```bash
+   source "${CLAUDE_PLUGIN_ROOT}/scripts/wiki-io.sh"
+   wiki_io_probe "${VAULT_PATH}"
+   wiki_qmd_probe "${VAULT_PATH}"
+   echo "Backend: $WIKI_IO_BACKEND | qmd: $WIKI_QMD_AVAILABLE"
+   ```
+   - If `WIKI_IO_BACKEND` is `"cli"` → use CLI for all read/search/write operations. Consult `${CLAUDE_PLUGIN_ROOT}/references/cli-patterns.md` for syntax.
+   - If `WIKI_IO_BACKEND` is `"mcp"` → attempt `mcp__obsidian__list_directory` on vault root. If it responds, use MCP. If not, use file tools (Read/Write/Edit/Grep/Glob).
+   - Commit to one I/O tier for the entire workflow. qmd availability is independent of the I/O tier.
+
+2. **Gather session context**:
+   - Look for the session change manifest at `/tmp/wiki-session-changes.*` — pick the newest (`ls -t /tmp/wiki-session-changes.* 2>/dev/null | head -1`). The notify hook writes per-session manifests; if none exist, skip this step.
+   - Review the conversation for: decisions made, bugs found + fixes, patterns discovered, current state of work, blockers, next steps
+
+3. **Search for related wiki content**:
+
+   **If `WIKI_QMD_AVAILABLE` is `"true"`** (semantic search):
+   ```bash
+   source "${CLAUDE_PLUGIN_ROOT}/scripts/wiki-io.sh"
+   wiki_qmd_search "<session keywords>" 10
+   ```
+   - Use the ranked paths to find related pages efficiently
+   - If qmd returns no results, fall back to the I/O tier search below
+
+   **If `WIKI_QMD_AVAILABLE` is `"false"`** (keyword search fallback):
+   - **CLI**: `obsidian search query="<keywords>" limit=20` via Bash — pipe through `head` if results are numerous
+   - **MCP**: `mcp__obsidian__search_notes` with query keywords
+   - **File tools**: `Grep` over `{VAULT_PATH}/**/*.md`
+
+   **Both paths**: check if knowledge pages already exist for discovered patterns (avoid duplicates). Identify existing notes that could be enriched.
+
+4. **Map project location**:
+   - Match CWD or the provided project name to a path under `{folders.projects}`, following the schema's `Project Mapping` section
+   - Use fuzzy matching (case-insensitive, check git remote for client/org hints)
+   - If no match, fall back to `{folders.notes}` if configured; otherwise ask the user
+
+5. **Write session log**:
+   - **Before writing**, verify the target path is not inside `folders.protected` (see §Protected paths in `references/setup.md`). If it is, abort with the documented message.
+   - Create `{VAULT_PATH}/{folders.projects}/<resolved-sub-structure>/session-log-YYYY-MM-DD.md`
+   - Use the `session-log` page type from the schema (Decisions, Findings, State, Next Steps)
+   - Set `wiki-source: {WIKI_SOURCE}` in frontmatter
+   - Link to knowledge pages with `[[wikilinks]]`
+   - **CLI**: `obsidian create path="<resolved-path>" content="<full-content>" silent` via Bash
+   - **MCP**: `mcp__obsidian__write_note`
+   - **File tools**: `Write {VAULT_PATH}/<path>`
+
+6. **Create/update knowledge pages** (for significant findings):
+   - **Before writing each page**, verify the target path is not inside `folders.protected` (see §Protected paths in `references/setup.md`). If it is, abort with the documented message.
+   - For each pattern, technique, or concept worth persisting beyond this session:
+     - If a knowledge page already exists → update it
+     - If new → create in `{VAULT_PATH}/{folders.resources}/<domain>/<topic>.md`
+   - **Auto-capture** (write directly): technical decisions, bug root causes, fix patterns, new techniques
+   - **Prompt first**: if the finding is ambiguous or would enrich an existing user-authored note
+
+7. **Enrich existing notes** (prompt first):
+   - **Before proposing an enrichment**, verify the target note is not inside `folders.protected` (see §Protected paths in `references/setup.md`). If it is, skip the enrichment silently — do not prompt the user about it.
+   - If session findings are relevant to existing notes, propose appending an enrichment
+   - Show the user what will be added and where
+   - On approval: append `> [!claude] Added YYYY-MM-DD` callout block after a `---` separator
+   - Update frontmatter: add `wiki-updated` and `wiki-updated-by` fields (value: `{WIKI_SOURCE}`)
+
+8. **Update MOCs**:
+   - If `{folders.areas}` is configured and new pages were created, add links to the relevant MOC
+   - Read the MOC first to find the right section
+
+9. **Update the index** (only if `{paths.index}` is non-empty):
+   - Follow the §Index management algorithm in `references/setup.md`.
+   - Rebuild the managed block from the current set of `wiki-source`-tagged `knowledge` and `source-summary` pages.
+   - Session logs (this capture's output) are **never** listed in the index — they live in the wiki log.
+   - Safe order: write the new knowledge pages first (step 6), then regenerate the index block. Never combine the two into one write.
+
+10. **Append to wiki log**:
+    - Append an entry to `{VAULT_PATH}/{paths.wiki_log}` following the log format in the schema
+    - List all pages created, updated, and enriched
+
+11. **Report**: Summarize what was filed — pages created, pages updated, enrichments made, and whether the index was regenerated.

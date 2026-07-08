@@ -1,0 +1,21 @@
+{
+	"name": "Clean trigger — wiki-lint activates for a wiki health check",
+	"skills": ["wiki-lint"],
+	"query": "Run a health check on my wiki — I want to know about orphans, broken links, and stale TODOs.",
+	"expected_behavior": [
+		"Route to wiki-lint skill",
+		"Run bootstrap before proceeding",
+		"Inventory the wiki (mcp__obsidian__get_vault_stats or Glob+wc fallback)",
+		"Check for orphans (no inbound [[wikilinks]])",
+		"Check for broken wikilinks",
+		"Check the inbox folder for unprocessed items",
+		"Check session logs older than 30 days for open - [ ] tasks",
+		"Produce a structured health report"
+	],
+	"success_criteria": [
+		"References the wiki-lint skill or /llm-wiki:wiki-lint command",
+		"Plans to check orphans, broken links, stale TODOs, inbox backlog",
+		"Mentions producing a Wiki Health Report with counts by page type"
+	],
+	"mode": "string_match"
+}

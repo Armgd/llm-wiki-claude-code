@@ -1,0 +1,26 @@
+{
+	"name": "llm-wiki",
+	"version": "1.1.0",
+	"description": "LLM-maintained wiki layer for an Obsidian vault. Uses Obsidian CLI (preferred), MCP (fallback), or file tools (last resort). Captures session knowledge, ingests external sources, queries the wiki, and keeps it healthy.",
+	"author": {
+		"name": "Nicolas Gras",
+		"email": "nicolasgras@users.noreply.github.com"
+	},
+	"skills": "./skills",
+	"repository": "https://github.com/Armgd/llm-wiki-claude-code",
+	"license": "MIT",
+	"keywords": [
+		"obsidian",
+		"wiki",
+		"knowledge-management",
+		"para",
+		"session-capture"
+	],
+	"mcpServers": {
+		"obsidian": {
+			"command": "npx",
+			"args": ["-y", "@bitbonsai/mcpvault@latest", "${OBSIDIAN_VAULT_PATH}"],
+			"env": {}
+		}
+	}
+}

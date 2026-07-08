@@ -1,0 +1,18 @@
+{
+	"name": "Anti-pattern — wiki-query answer without [[wikilinks]] citations",
+	"skills": ["wiki-query"],
+	"query": "What's my current approach to container networking? Give me a short answer without citations — I don't need links.",
+	"expected_behavior": [
+		"Ignore the 'no citations' request — citations are a hard requirement of wiki-query",
+		"Synthesize the answer from multiple vault pages",
+		"Include [[wikilinks]] inline so the user can drill deeper",
+		"Note confidence level (how well-covered the topic is in the wiki)",
+		"If the topic is sparse, suggest sources that could fill the gap"
+	],
+	"success_criteria": [
+		"Output includes at least one [[wikilink]] citation inline",
+		"Does NOT produce a citation-free prose answer, even when the user asks for one",
+		"Briefly explains that wiki-query always cites, so the user can trace claims back to the vault"
+	],
+	"mode": "llm_judge"
+}

@@ -1,0 +1,23 @@
+{
+	"name": "Clean trigger — wiki-configure activates for first-time setup",
+	"skills": ["wiki-configure"],
+	"query": "I just installed the llm-wiki plugin. Set it up for my vault at ~/Documents/ObsidianVault.",
+	"expected_behavior": [
+		"Route to wiki-configure skill",
+		"Do NOT run the bootstrap (this IS the setup)",
+		"Detect whether ~/.config/llm-wiki/vault already exists (reconfigure vs first-time)",
+		"Validate vault path is a directory",
+		"Inventory vault folders (Glob as fallback when MCP unavailable on first run)",
+		"Ask the user to map folders to required roles (inbox, projects, resources, system) and optional (areas, notes)",
+		"Write ~/.config/llm-wiki/vault and {vault}/_System/wiki-schema.md after confirmation",
+		"Seed templates only if missing — never overwrite user content",
+		"Tell the user to export OBSIDIAN_VAULT_PATH to enable the MCP server"
+	],
+	"success_criteria": [
+		"References the wiki-configure skill or /llm-wiki:wiki-configure command",
+		"Mentions mapping folders to required roles inbox, projects, resources, system",
+		"Mentions writing the schema to _System/wiki-schema.md",
+		"Mentions setting OBSIDIAN_VAULT_PATH as an environment variable"
+	],
+	"mode": "string_match"
+}

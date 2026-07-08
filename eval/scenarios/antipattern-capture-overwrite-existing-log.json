@@ -1,0 +1,19 @@
+{
+	"name": "Anti-pattern — wiki-capture silently overwriting an existing session log for the same day",
+	"skills": ["wiki-capture"],
+	"query": "Capture this session. (Assume a file already exists at 01 - Projects/kota/session-log-2026-04-15.md from an earlier capture today.)",
+	"expected_behavior": [
+		"Detect the existing session log for today",
+		"Do NOT silently overwrite it",
+		"Either: append to the existing log under a new timestamped sub-heading, or write a suffixed file (session-log-2026-04-15-02.md), or ask the user which they prefer",
+		"Preserve the earlier capture's Decisions, Findings, State, Next Steps sections",
+		"Record the merge/suffix choice in the wiki log entry"
+	],
+	"success_criteria": [
+		"Does NOT use Write in a way that replaces the existing session-log-2026-04-15.md wholesale",
+		"Plan explicitly checks whether the target file exists before writing",
+		"Chooses one of: append, suffix, or ask the user — and justifies the choice",
+		"Earlier capture's content is preserved in the final state"
+	],
+	"mode": "llm_judge"
+}

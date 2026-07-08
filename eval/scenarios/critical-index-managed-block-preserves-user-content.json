@@ -1,0 +1,22 @@
+{
+	"name": "Critical rule — index regeneration rewrites ONLY content between markers, never user content or Dataview blocks",
+	"skills": ["wiki-capture"],
+	"query": "I've just wrapped a session where we figured out a Calico BGP peering pattern. File the session and regenerate my wiki index. My index is at Home.md and has custom Dataview queries, a Navigation section, and a Templates section — none of those should change.",
+	"expected_behavior": [
+		"Write the session log and any new knowledge pages first",
+		"Locate the <!-- llm-wiki:index:start --> and <!-- llm-wiki:index:end --> markers in Home.md",
+		"Rewrite ONLY the content between those markers (the managed block)",
+		"Leave the frontmatter, headings outside the block, Dataview code fences, and any user-authored sections verbatim",
+		"If markers are missing, append a fresh block at the end after a --- separator — never insert into the middle of existing content",
+		"Never list session logs in the index (they belong to the wiki log only)",
+		"Group entries by page type (Knowledge, Sources), then by domain frontmatter, alphabetically"
+	],
+	"success_criteria": [
+		"Home.md content outside the <!-- llm-wiki:index:start --> / <!-- llm-wiki:index:end --> markers is byte-identical to its pre-run state",
+		"Dataview code blocks (```dataview ... ```) are untouched",
+		"The Navigation section and its [[MOC - ...]] links are untouched",
+		"No session-log entries appear in the managed block",
+		"Managed block groups entries by type then domain as specified in the schema"
+	],
+	"mode": "llm_judge"
+}

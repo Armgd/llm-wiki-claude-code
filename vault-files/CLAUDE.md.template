@@ -1,0 +1,22 @@
+# CLAUDE.md — vault-specific LLM guidance
+
+> Freeform context the wiki schema can't express. Read by every llm-wiki skill during bootstrap.
+> The schema (`_System/wiki-schema.md`) is the structural source of truth — folder roles, page types, and protected paths live there.
+> Use this file for advisory notes that change per vault.
+
+<!--
+## Vault-specific conventions
+
+> [!note]
+> Example: `Notes/` is my personal scratch space — file unclassified content there rather than `04 - Notes/`.
+
+## Folders managed by other plugins
+
+> [!warning]
+> Example: `Daily/` is fully owned by the Templater plugin — never write to it directly, even though it's not in `folders.protected`.
+
+## Working notes that aren't yet promoted
+
+> [!info]
+> Example: anything tagged `#draft` is still being shaped — don't enrich it with `> [!claude]` callouts yet.
+-->

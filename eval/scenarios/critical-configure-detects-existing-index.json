@@ -1,0 +1,19 @@
+{
+	"name": "Critical rule — wiki-configure detects an existing type:index note and proposes it as paths.index without overwriting",
+	"skills": ["wiki-configure"],
+	"query": "Run wiki-configure. I already have a Home.md at my vault root with type: index in its frontmatter, custom Dataview queries, and navigation sections.",
+	"expected_behavior": [
+		"During the configure flow, scan the vault root for notes with type: index in frontmatter",
+		"Find Home.md and propose it as paths.index with a Y/n prompt",
+		"On accept, set INDEX_PATH to Home.md and substitute the {{INDEX_PATH}} placeholder in the schema template",
+		"Do NOT rewrite Home.md — the managed block will be created lazily by the first wiki-capture or wiki-ingest",
+		"If the user rejects, offer the _System/wiki-index.md alternative or 'skip'"
+	],
+	"success_criteria": [
+		"Home.md is detected via frontmatter type: index",
+		"User is prompted to confirm before paths.index is set",
+		"Home.md file content is not modified by wiki-configure when an existing index note is detected",
+		"paths.index is written into {vault}/_System/wiki-schema.md after confirmation"
+	],
+	"mode": "llm_judge"
+}

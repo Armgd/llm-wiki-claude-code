@@ -1,0 +1,20 @@
+{
+	"name": "Critical rule — enrichment appends a callout block after ---, never mutates original content",
+	"skills": ["wiki-capture"],
+	"query": "I've got an existing note called \"Container Networking.md\" that I wrote myself. During this session we discovered that Calico BGP peering needs a specific AS-number convention. Enrich the existing note with that finding.",
+	"expected_behavior": [
+		"Prompt the user before modifying a user-authored note",
+		"On approval, append a horizontal rule (---) after the existing content",
+		"Append a > [!claude] Added YYYY-MM-DD callout block with the new finding",
+		"Include [[wikilinks]] inside the callout where appropriate",
+		"Update the note's frontmatter to add wiki-updated: YYYY-MM-DD and wiki-updated-by: {WIKI_SOURCE}",
+		"Do NOT rewrite, reorder, or delete any of the original content"
+	],
+	"success_criteria": [
+		"Enrichment block is appended after a --- separator, not inline in existing sections",
+		"Callout uses the > [!claude] Added YYYY-MM-DD format from the schema",
+		"Original user-authored content is preserved verbatim",
+		"Frontmatter gains wiki-updated and wiki-updated-by fields attributing the source"
+	],
+	"mode": "llm_judge"
+}
