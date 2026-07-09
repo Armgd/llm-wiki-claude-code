@@ -2,6 +2,8 @@
 
 llm-wiki is a pattern for building a personal knowledge base with an LLM agent. Instead of retrieving from raw documents at query time (RAG-style), the agent incrementally builds and maintains a persistent wiki — a structured, interlinked collection of markdown files in an Obsidian vault — that sits between you and your raw sources. When you add a source, the agent reads it, extracts the key information, and integrates it into the existing wiki: updating entity pages, revising summaries, flagging contradictions, strengthening the synthesis. The wiki is a persistent, compounding artifact that stays current because the agent does the maintenance no one wants to do by hand.
 
+See `reference.md` for the full background and rationale behind this pattern; consult it when in doubt about scope.
+
 ## Working in this repo
 
 ### Think Before Coding

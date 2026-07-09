@@ -14,7 +14,9 @@ Set `SKILL_DIR` to the absolute path of this skill's directory. In Claude Code, 
 `${CLAUDE_SKILL_DIR}` (your host substitutes it). On Codex, Gemini, OpenCode, or Pi,
 substitute the absolute skill path your host reported when it loaded this skill. A Bash
 step's working directory is the user's project, not the skill dir, so every bundled-file
-reference below uses `$SKILL_DIR` — never a bare relative path.
+reference below uses `$SKILL_DIR` — never a bare relative path. Any Bash step that copies
+from `vault-files/` must first set `SKILL_DIR="${CLAUDE_SKILL_DIR}"` (Claude fills this in;
+other hosts substitute the absolute skill dir instead).
 
 ## Arguments
 

@@ -127,7 +127,7 @@ Walk through the `wiki-configure` skill against `test-fixtures/vault/` for first
 
 - `bash`, `jq` — required for hooks, and for the obsidian-CLI I/O tier (`wiki_cli_move` uses `jq` to JSON-encode paths safely).
 - An Obsidian vault (PARA-shape, names are user-defined)
-- Node.js 18+ if using the MCP tier (bundled `mcpvault` server runs via `npx`)
+- Node.js 18+ if using the MCP tier (bundled `mcpvault` server runs via `npx`), and to run `scripts/check.sh` (it `node --check`s the OpenCode adapter)
 - One of: Claude Code, Codex, Gemini CLI, OpenCode, or Pi
 
 ## License
