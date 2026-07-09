@@ -1,21 +1,27 @@
 ---
 name: wiki-ingest
-description: Use this skill to ingest an external source (article, PDF, meeting notes) into an Obsidian-based LLM wiki. Triggers when the user runs the /llm-wiki:wiki-ingest slash command, asks to "ingest this article", "summarize and file this source", or similar source-processing requests. Produces a source summary page cross-referenced with existing knowledge and moves the original to the vault's archive.
+description: Use this skill to ingest an external source (article, PDF, meeting notes) into an Obsidian-based LLM wiki. Triggers when the user runs the wiki-ingest skill (Claude: `/llm-wiki:wiki-ingest`), asks to "ingest this article", "summarize and file this source", or similar source-processing requests. Produces a source summary page cross-referenced with existing knowledge and moves the original to the vault's archive.
 argument-hint: "<path-to-source-note-relative-to-vault>"
 allowed-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__obsidian__search_notes, mcp__obsidian__read_note, mcp__obsidian__write_note, mcp__obsidian__patch_note, mcp__obsidian__update_frontmatter, mcp__obsidian__get_frontmatter, mcp__obsidian__list_directory, mcp__obsidian__move_note, mcp__obsidian__move_file
 ---
 
-# /llm-wiki:wiki-ingest
+# wiki-ingest skill (Claude: `/llm-wiki:wiki-ingest`)
 
 Process an external source into a structured summary filed in the user's Obsidian vault.
 
 ## Bootstrap (required)
 
-Read `${CLAUDE_PLUGIN_ROOT}/references/setup.md` in full and follow it before proceeding. Do not proceed until bootstrap succeeds.
+**Resolve the skill directory first.** Set `SKILL_DIR` to the absolute path of this
+skill's directory. In Claude Code, use `${CLAUDE_SKILL_DIR}` (your host substitutes it).
+On Codex, Gemini, OpenCode, or Pi, substitute the absolute skill path your host reported
+when it loaded this skill. A Bash step's working directory is the user's project, not the
+skill dir, so every bundled-file reference below uses `$SKILL_DIR` — never a bare relative path.
+
+Read `$SKILL_DIR/references/setup.md` in full and follow it before proceeding. Do not proceed until bootstrap succeeds.
 
 ## Arguments
 
-Path to the source note, relative to the vault root (example: `/llm-wiki:wiki-ingest "00 - Inbox/The AI Layoff Trap.md"`).
+Path to the source note, relative to the vault root, e.g. `"00 - Inbox/The AI Layoff Trap.md"` (Claude: `/llm-wiki:wiki-ingest "00 - Inbox/The AI Layoff Trap.md"`).
 
 ## Workflow
 
@@ -23,13 +29,18 @@ Path to the source note, relative to the vault root (example: `/llm-wiki:wiki-in
 
    **Probe I/O backend** — run via Bash:
    ```bash
-   source "${CLAUDE_PLUGIN_ROOT}/scripts/wiki-io.sh"
+   SKILL_DIR="${CLAUDE_SKILL_DIR}"   # Claude fills this; other hosts: set to the abs skill dir
+   source "$SKILL_DIR/scripts/wiki-io.sh"
    wiki_io_probe "${VAULT_PATH}"
    wiki_qmd_probe "${VAULT_PATH}"
    echo "Backend: $WIKI_IO_BACKEND | qmd: $WIKI_QMD_AVAILABLE"
    ```
-   - If `WIKI_IO_BACKEND` is `"cli"` → use CLI for all read/search/write operations. Consult `${CLAUDE_PLUGIN_ROOT}/references/cli-patterns.md` for syntax.
-   - If `WIKI_IO_BACKEND` is `"mcp"` → attempt `mcp__obsidian__list_directory` on vault root. If it responds, use MCP. If not, use file tools (Read/Write/Edit/Grep/Glob).
+   - If `WIKI_IO_BACKEND` is `"cli"` → use CLI for all read/search/write operations. Consult `$SKILL_DIR/references/cli-patterns.md` for syntax.
+   - If `WIKI_IO_BACKEND` is `"mcp"` → if this agent exposes Obsidian MCP tools
+     (Claude/Gemini/OpenCode name them `mcp__obsidian__*`; other agents may not have
+     them at all), probe `mcp__obsidian__list_directory` on the vault root and use MCP
+     if it responds. Otherwise use file tools (Read/Write/Edit/Grep/Glob). Agents
+     without MCP (e.g. Pi) always land on the CLI or file-tool tier — this is expected.
    - Commit to one I/O tier for the entire workflow. qmd availability is independent of the I/O tier.
 
 2. **Read the source**:
@@ -48,7 +59,7 @@ Path to the source note, relative to the vault root (example: `/llm-wiki:wiki-in
 
    **If `WIKI_QMD_AVAILABLE` is `"true"`** (semantic search):
    ```bash
-   source "${CLAUDE_PLUGIN_ROOT}/scripts/wiki-io.sh"
+   source "$SKILL_DIR/scripts/wiki-io.sh"
    wiki_qmd_search "<keywords from key claims>" 10
    ```
    - Use the ranked paths to find related pages and potential contradictions

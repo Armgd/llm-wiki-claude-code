@@ -1,21 +1,27 @@
 ---
 name: wiki-capture
-description: Use this skill to capture session knowledge into an Obsidian-based LLM wiki. Triggers when the user runs the /llm-wiki:wiki-capture slash command, asks to "capture this session", "file this session into the wiki", or similar end-of-session knowledge persistence requests. Produces a session log in the vault plus optional knowledge page creation and enrichments.
+description: Use this skill to capture session knowledge into an Obsidian-based LLM wiki. Triggers when the user runs the wiki-capture skill (Claude: `/llm-wiki:wiki-capture`), asks to "capture this session", "file this session into the wiki", or similar end-of-session knowledge persistence requests. Produces a session log in the vault plus optional knowledge page creation and enrichments.
 argument-hint: "[project-name]"
 allowed-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__obsidian__search_notes, mcp__obsidian__read_note, mcp__obsidian__read_multiple_notes, mcp__obsidian__write_note, mcp__obsidian__patch_note, mcp__obsidian__update_frontmatter, mcp__obsidian__get_frontmatter, mcp__obsidian__list_directory, mcp__obsidian__get_notes_info
 ---
 
-# /llm-wiki:wiki-capture
+# wiki-capture skill (Claude: `/llm-wiki:wiki-capture`)
 
 Extract and file knowledge from the current session into the user's Obsidian vault.
 
 ## Bootstrap (required)
 
-Read `${CLAUDE_PLUGIN_ROOT}/references/setup.md` in full and follow it before proceeding. It tells you how to resolve the vault path, read and parse the schema, and handle optional folder roles. Do not proceed with capture until bootstrap succeeds; if it aborts, propagate its message to the user and stop.
+**Resolve the skill directory first.** Set `SKILL_DIR` to the absolute path of this
+skill's directory. In Claude Code, use `${CLAUDE_SKILL_DIR}` (your host substitutes it).
+On Codex, Gemini, OpenCode, or Pi, substitute the absolute skill path your host reported
+when it loaded this skill. A Bash step's working directory is the user's project, not the
+skill dir, so every bundled-file reference below uses `$SKILL_DIR` — never a bare relative path.
+
+Read `$SKILL_DIR/references/setup.md` in full and follow it before proceeding. It tells you how to resolve the vault path, read and parse the schema, and handle optional folder roles. Do not proceed with capture until bootstrap succeeds; if it aborts, propagate its message to the user and stop.
 
 ## Arguments
 
-Optional project name (e.g. `/llm-wiki:wiki-capture kota`). If omitted, infer from the current working directory or ask the user.
+Optional project name, e.g. `kota` (Claude: `/llm-wiki:wiki-capture kota`). If omitted, infer from the current working directory or ask the user.
 
 ## Workflow
 
@@ -23,13 +29,18 @@ Optional project name (e.g. `/llm-wiki:wiki-capture kota`). If omitted, infer fr
 
    **Probe I/O backend** — run via Bash:
    ```bash
-   source "${CLAUDE_PLUGIN_ROOT}/scripts/wiki-io.sh"
+   SKILL_DIR="${CLAUDE_SKILL_DIR}"   # Claude fills this; other hosts: set to the abs skill dir
+   source "$SKILL_DIR/scripts/wiki-io.sh"
    wiki_io_probe "${VAULT_PATH}"
    wiki_qmd_probe "${VAULT_PATH}"
    echo "Backend: $WIKI_IO_BACKEND | qmd: $WIKI_QMD_AVAILABLE"
    ```
-   - If `WIKI_IO_BACKEND` is `"cli"` → use CLI for all read/search/write operations. Consult `${CLAUDE_PLUGIN_ROOT}/references/cli-patterns.md` for syntax.
-   - If `WIKI_IO_BACKEND` is `"mcp"` → attempt `mcp__obsidian__list_directory` on vault root. If it responds, use MCP. If not, use file tools (Read/Write/Edit/Grep/Glob).
+   - If `WIKI_IO_BACKEND` is `"cli"` → use CLI for all read/search/write operations. Consult `$SKILL_DIR/references/cli-patterns.md` for syntax.
+   - If `WIKI_IO_BACKEND` is `"mcp"` → if this agent exposes Obsidian MCP tools
+     (Claude/Gemini/OpenCode name them `mcp__obsidian__*`; other agents may not have
+     them at all), probe `mcp__obsidian__list_directory` on the vault root and use MCP
+     if it responds. Otherwise use file tools (Read/Write/Edit/Grep/Glob). Agents
+     without MCP (e.g. Pi) always land on the CLI or file-tool tier — this is expected.
    - Commit to one I/O tier for the entire workflow. qmd availability is independent of the I/O tier.
 
 2. **Gather session context**:
@@ -40,7 +51,7 @@ Optional project name (e.g. `/llm-wiki:wiki-capture kota`). If omitted, infer fr
 
    **If `WIKI_QMD_AVAILABLE` is `"true"`** (semantic search):
    ```bash
-   source "${CLAUDE_PLUGIN_ROOT}/scripts/wiki-io.sh"
+   source "$SKILL_DIR/scripts/wiki-io.sh"
    wiki_qmd_search "<session keywords>" 10
    ```
    - Use the ranked paths to find related pages efficiently

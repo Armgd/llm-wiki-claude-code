@@ -1,21 +1,27 @@
 ---
 name: wiki-query
-description: Use this skill to query an Obsidian-based LLM wiki with a natural-language question and get a synthesized answer with wikilink citations. Triggers when the user runs the /llm-wiki:wiki-query slash command, asks "what does the wiki say about X", "search my wiki for Y", or similar knowledge-lookup requests. Optionally offers to file substantial answers back into the wiki as knowledge pages.
+description: Use this skill to query an Obsidian-based LLM wiki with a natural-language question and get a synthesized answer with wikilink citations. Triggers when the user runs the wiki-query skill (Claude: `/llm-wiki:wiki-query`), asks "what does the wiki say about X", "search my wiki for Y", or similar knowledge-lookup requests. Optionally offers to file substantial answers back into the wiki as knowledge pages.
 argument-hint: "<natural-language-question>"
 allowed-tools: Read, Grep, Glob, Bash, Write, mcp__obsidian__search_notes, mcp__obsidian__read_note, mcp__obsidian__read_multiple_notes, mcp__obsidian__get_notes_info, mcp__obsidian__write_note, mcp__obsidian__list_directory
 ---
 
-# /llm-wiki:wiki-query
+# wiki-query skill (Claude: `/llm-wiki:wiki-query`)
 
 Search the user's Obsidian wiki and synthesize an answer to their question with citations.
 
 ## Bootstrap (required)
 
-Read `${CLAUDE_PLUGIN_ROOT}/references/setup.md` in full and follow it before proceeding. Do not proceed until bootstrap succeeds.
+**Resolve the skill directory first.** Set `SKILL_DIR` to the absolute path of this
+skill's directory. In Claude Code, use `${CLAUDE_SKILL_DIR}` (your host substitutes it).
+On Codex, Gemini, OpenCode, or Pi, substitute the absolute skill path your host reported
+when it loaded this skill. A Bash step's working directory is the user's project, not the
+skill dir, so every bundled-file reference below uses `$SKILL_DIR` — never a bare relative path.
+
+Read `$SKILL_DIR/references/setup.md` in full and follow it before proceeding. Do not proceed until bootstrap succeeds.
 
 ## Arguments
 
-Natural language question (example: `/llm-wiki:wiki-query "What's my current approach to container networking?"`).
+Natural language question, e.g. `"What's my current approach to container networking?"` (Claude: `/llm-wiki:wiki-query "What's my current approach to container networking?"`).
 
 ## Workflow
 
@@ -23,13 +29,18 @@ Natural language question (example: `/llm-wiki:wiki-query "What's my current app
 
    **Probe I/O backend** — run via Bash:
    ```bash
-   source "${CLAUDE_PLUGIN_ROOT}/scripts/wiki-io.sh"
+   SKILL_DIR="${CLAUDE_SKILL_DIR}"   # Claude fills this; other hosts: set to the abs skill dir
+   source "$SKILL_DIR/scripts/wiki-io.sh"
    wiki_io_probe "${VAULT_PATH}"
    wiki_qmd_probe "${VAULT_PATH}"
    echo "Backend: $WIKI_IO_BACKEND | qmd: $WIKI_QMD_AVAILABLE"
    ```
-   - If `WIKI_IO_BACKEND` is `"cli"` → use CLI for all read/search/write operations. Consult `${CLAUDE_PLUGIN_ROOT}/references/cli-patterns.md` for syntax.
-   - If `WIKI_IO_BACKEND` is `"mcp"` → attempt `mcp__obsidian__list_directory` on vault root. If it responds, use MCP. If not, use file tools (Read/Write/Edit/Grep/Glob).
+   - If `WIKI_IO_BACKEND` is `"cli"` → use CLI for all read/search/write operations. Consult `$SKILL_DIR/references/cli-patterns.md` for syntax.
+   - If `WIKI_IO_BACKEND` is `"mcp"` → if this agent exposes Obsidian MCP tools
+     (Claude/Gemini/OpenCode name them `mcp__obsidian__*`; other agents may not have
+     them at all), probe `mcp__obsidian__list_directory` on the vault root and use MCP
+     if it responds. Otherwise use file tools (Read/Write/Edit/Grep/Glob). Agents
+     without MCP (e.g. Pi) always land on the CLI or file-tool tier — this is expected.
    - Commit to one I/O tier for the entire workflow. qmd availability is independent of the I/O tier.
 
 2. **Read the index first** (only if `{paths.index}` is non-empty):
@@ -43,7 +54,7 @@ Natural language question (example: `/llm-wiki:wiki-query "What's my current app
 
    **If `WIKI_QMD_AVAILABLE` is `"true"`** (semantic search):
    ```bash
-   source "${CLAUDE_PLUGIN_ROOT}/scripts/wiki-io.sh"
+   source "$SKILL_DIR/scripts/wiki-io.sh"
    wiki_qmd_search "<question keywords>" 10
    ```
    - qmd returns ranked results with filepath and context snippet — use these paths directly

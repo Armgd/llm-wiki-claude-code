@@ -1,17 +1,23 @@
 ---
 name: wiki-lint
-description: Use this skill to health-check an Obsidian-based LLM wiki — detect orphans, broken wikilinks, stale session-log TODOs, unprocessed inbox items, and knowledge gaps. Triggers when the user runs the /llm-wiki:wiki-lint slash command, asks to "audit my wiki", "run a wiki health check", or similar maintenance requests. Supports an optional --fix flag for safe repairs.
+description: Use this skill to health-check an Obsidian-based LLM wiki — detect orphans, broken wikilinks, stale session-log TODOs, unprocessed inbox items, and knowledge gaps. Triggers when the user runs the wiki-lint skill (Claude: `/llm-wiki:wiki-lint`), asks to "audit my wiki", "run a wiki health check", or similar maintenance requests. Supports an optional --fix flag for safe repairs.
 argument-hint: "[--fix]"
 allowed-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__obsidian__search_notes, mcp__obsidian__read_note, mcp__obsidian__get_vault_stats, mcp__obsidian__list_directory, mcp__obsidian__get_frontmatter, mcp__obsidian__get_notes_info
 ---
 
-# /llm-wiki:wiki-lint
+# wiki-lint skill (Claude: `/llm-wiki:wiki-lint`)
 
 Health-check the user's Obsidian wiki and report (optionally repair) issues.
 
 ## Bootstrap (required)
 
-Read `${CLAUDE_PLUGIN_ROOT}/references/setup.md` in full and follow it before proceeding. Do not proceed until bootstrap succeeds.
+**Resolve the skill directory first.** Set `SKILL_DIR` to the absolute path of this
+skill's directory. In Claude Code, use `${CLAUDE_SKILL_DIR}` (your host substitutes it).
+On Codex, Gemini, OpenCode, or Pi, substitute the absolute skill path your host reported
+when it loaded this skill. A Bash step's working directory is the user's project, not the
+skill dir, so every bundled-file reference below uses `$SKILL_DIR` — never a bare relative path.
+
+Read `$SKILL_DIR/references/setup.md` in full and follow it before proceeding. Do not proceed until bootstrap succeeds.
 
 ## Arguments
 
@@ -23,12 +29,17 @@ Optional `--fix` flag to auto-apply safe repairs (add cross-references, link orp
 
    **Probe I/O backend** — run via Bash:
    ```bash
-   source "${CLAUDE_PLUGIN_ROOT}/scripts/wiki-io.sh"
+   SKILL_DIR="${CLAUDE_SKILL_DIR}"   # Claude fills this; other hosts: set to the abs skill dir
+   source "$SKILL_DIR/scripts/wiki-io.sh"
    wiki_io_probe "${VAULT_PATH}"
    echo "Backend: $WIKI_IO_BACKEND"
    ```
-   - If `WIKI_IO_BACKEND` is `"cli"` → use CLI for all read/search/write operations. Consult `${CLAUDE_PLUGIN_ROOT}/references/cli-patterns.md` for syntax.
-   - If `WIKI_IO_BACKEND` is `"mcp"` → attempt `mcp__obsidian__list_directory` on vault root. If it responds, use MCP. If not, use file tools (Read/Write/Edit/Grep/Glob).
+   - If `WIKI_IO_BACKEND` is `"cli"` → use CLI for all read/search/write operations. Consult `$SKILL_DIR/references/cli-patterns.md` for syntax.
+   - If `WIKI_IO_BACKEND` is `"mcp"` → if this agent exposes Obsidian MCP tools
+     (Claude/Gemini/OpenCode name them `mcp__obsidian__*`; other agents may not have
+     them at all), probe `mcp__obsidian__list_directory` on the vault root and use MCP
+     if it responds. Otherwise use file tools (Read/Write/Edit/Grep/Glob). Agents
+     without MCP (e.g. Pi) always land on the CLI or file-tool tier — this is expected.
    - Commit to one tier for the entire workflow.
 
 2. **Inventory the wiki**:
@@ -43,7 +54,7 @@ Optional `--fix` flag to auto-apply safe repairs (add cross-references, link orp
 
 3. **Check index consistency** (only if `{paths.index}` is non-empty):
    - Read `{VAULT_PATH}/{paths.index}` and extract the content between `<!-- llm-wiki:index:start -->` and `<!-- llm-wiki:index:end -->`.
-   - If markers are missing: report `Index markers missing — run /llm-wiki:wiki-capture (or --fix)` and skip the rest of this step.
+   - If markers are missing: report `Index markers missing — run wiki-capture (or --fix)` (Claude: `/llm-wiki:wiki-capture`) and skip the rest of this step.
    - Compare the set of `[[wikilinks]]` inside the block against the set of `knowledge` + `source-summary` pages found via frontmatter search:
      - **Missing entries**: pages that exist in the vault but are not listed in the index.
      - **Stale entries**: index entries that point to pages that no longer exist (renamed/deleted).

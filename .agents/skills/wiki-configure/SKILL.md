@@ -1,12 +1,20 @@
 ---
 name: wiki-configure
-description: Use this skill to set up (or reconfigure) the llm-wiki plugin for a user's Obsidian vault. Triggers when the user runs the /llm-wiki:wiki-configure slash command, asks to "set up llm-wiki", "configure the wiki plugin", or after first installation of the plugin. Inventories the vault, asks the user to map folders to wiki roles, writes the vault path file and the filled-in schema, and instructs the user how to set the OBSIDIAN_VAULT_PATH env var for the bundled MCP server.
+description: Use this skill to set up (or reconfigure) the llm-wiki plugin for a user's Obsidian vault. Triggers when the user runs the wiki-configure skill (Claude: `/llm-wiki:wiki-configure`), asks to "set up llm-wiki", "configure the wiki plugin", or after first installation of the plugin. Inventories the vault, asks the user to map folders to wiki roles, writes the vault path file and the filled-in schema, and instructs the user how to set the OBSIDIAN_VAULT_PATH env var for the bundled MCP server.
 allowed-tools: Read, Write, Edit, Glob, Bash
 ---
 
-# /llm-wiki:wiki-configure
+# wiki-configure skill (Claude: `/llm-wiki:wiki-configure`)
 
 Interactive setup for the llm-wiki plugin. Unlike the other wiki commands, this one runs WITHOUT the bootstrap in `references/setup.md` — it's the setup itself. Obsidian MCP tools may be unavailable on first run (they need the vault path this command sets); gracefully fall back to `Glob`.
+
+## Resolve the skill directory first
+
+Set `SKILL_DIR` to the absolute path of this skill's directory. In Claude Code, use
+`${CLAUDE_SKILL_DIR}` (your host substitutes it). On Codex, Gemini, OpenCode, or Pi,
+substitute the absolute skill path your host reported when it loaded this skill. A Bash
+step's working directory is the user's project, not the skill dir, so every bundled-file
+reference below uses `$SKILL_DIR` — never a bare relative path.
 
 ## Arguments
 
@@ -191,7 +199,7 @@ On confirmation:
    - Create the `~/.config/llm-wiki/` directory if missing
    - Write the absolute vault path as the sole line of the file (no trailing newline issues — use `printf "%s\n" "$VAULT_PATH"`)
 
-2. **Read the template** — `${CLAUDE_PLUGIN_ROOT}/vault-files/wiki-schema.md.template`
+2. **Read the template** — `$SKILL_DIR/vault-files/wiki-schema.md.template`
 
 3. **Substitute all `{{PLACEHOLDER}}` markers**:
    - `{{VAULT_PATH}}` → absolute vault path
@@ -216,8 +224,8 @@ On confirmation:
 5. **Seed the vault** (first-time only):
    - Create `{vault}/_System/Templates/` if missing
    - Create `{vault}/_System/Archive/Sources/` if missing
-   - If `{vault}/_System/wiki-log.md` is missing, copy `${CLAUDE_PLUGIN_ROOT}/vault-files/wiki-log.md` to it
-   - For each file in `${CLAUDE_PLUGIN_ROOT}/vault-files/Templates/`, copy to `{vault}/_System/Templates/` only if not already present (never overwrite user content)
+   - If `{vault}/_System/wiki-log.md` is missing, copy `$SKILL_DIR/vault-files/wiki-log.md` to it
+   - For each file in `$SKILL_DIR/vault-files/Templates/`, copy to `{vault}/_System/Templates/` only if not already present (never overwrite user content)
 
 6. **Seed the index note** (only if `INDEX_PATH` is non-empty):
    - If `{vault}/{INDEX_PATH}` **exists**: do NOT modify it. The managed block will be created lazily on the first `wiki-capture` or `wiki-ingest` call that needs to write entries.
@@ -252,7 +260,7 @@ On confirmation:
 8. **Offer to scaffold a vault-root `CLAUDE.md`** (freeform per-vault LLM guidance — see §Read optional vault-root override file in `references/setup.md`):
    - Skip silently if `{VAULT_PATH}/CLAUDE.md` already exists. Never overwrite.
    - Ask: `Scaffold a vault-root CLAUDE.md for vault-specific LLM guidance? [y/N]` — default is no.
-   - On accept: copy `${CLAUDE_PLUGIN_ROOT}/vault-files/CLAUDE.md.template` verbatim to `{VAULT_PATH}/CLAUDE.md`. No template substitution — the file is freeform context the user fills in.
+   - On accept: copy `$SKILL_DIR/vault-files/CLAUDE.md.template` verbatim to `{VAULT_PATH}/CLAUDE.md`. No template substitution — the file is freeform context the user fills in.
 
 ### 9. Reconfigure diff (only if this is a reconfigure flow)
 
@@ -308,7 +316,7 @@ To re-index after adding many files manually: qmd update && qmd embed
 ```
 Tip: Install qmd for semantic search at scale (optional):
   npm install -g @tobilu/qmd
-  Then re-run /llm-wiki:wiki-configure to register your vault.
+  Then re-run wiki-configure (Claude: /llm-wiki:wiki-configure) to register your vault.
 ```
 
 Use the actual vault path and CLI path in all examples, not placeholders.
@@ -338,5 +346,5 @@ Vault path file: ~/.config/llm-wiki/vault
 Next:
 1. Add export OBSIDIAN_VAULT_PATH="{VAULT_PATH}" to your shell profile
 2. Restart Claude Code
-3. Run /llm-wiki:wiki-capture at the end of your next work session
+3. Run wiki-capture (Claude: /llm-wiki:wiki-capture) at the end of your next work session
 ```
