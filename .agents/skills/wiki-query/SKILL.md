@@ -16,6 +16,7 @@ skill's directory. In Claude Code, use `${CLAUDE_SKILL_DIR}` (your host substitu
 On Codex, Gemini, OpenCode, or Pi, substitute the absolute skill path your host reported
 when it loaded this skill. A Bash step's working directory is the user's project, not the
 skill dir, so every bundled-file reference below uses `$SKILL_DIR` — never a bare relative path.
+Set SKILL_DIR at the start of every Bash step that sources the helper — Bash tool calls run in separate shells and do not share variables.
 
 Read `$SKILL_DIR/references/setup.md` in full and follow it before proceeding. Do not proceed until bootstrap succeeds.
 
@@ -54,6 +55,7 @@ Natural language question, e.g. `"What's my current approach to container networ
 
    **If `WIKI_QMD_AVAILABLE` is `"true"`** (semantic search):
    ```bash
+   SKILL_DIR="${CLAUDE_SKILL_DIR}"   # Claude fills this; other hosts: set to the abs skill dir
    source "$SKILL_DIR/scripts/wiki-io.sh"
    wiki_qmd_search "<question keywords>" 10
    ```
