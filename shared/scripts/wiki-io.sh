@@ -165,17 +165,15 @@ wiki_cli_move() {
   local old_path="${1:?wiki_cli_move requires old_path}"
   local new_path="${2:?wiki_cli_move requires new_path}"
 
-  # Reject control characters / newlines that could break out of the eval string.
-  case "$old_path$new_path" in
-    *[[:cntrl:]]*) return 1 ;;
-  esac
+  # Encode paths as JSON string literals via jq so quotes, backslashes, control
+  # chars, and UTF-8 are escaped correctly and portably. JSON string syntax is
+  # valid JS string syntax, and jq emits the surrounding double quotes. This
+  # avoids fragile shell backslash handling that differs across bash versions.
+  local old_js new_js
+  old_js=$(printf '%s' "$old_path" | jq -Rs .) || return 1
+  new_js=$(printf '%s' "$new_path" | jq -Rs .) || return 1
 
-  # Escape backslashes first, then single quotes, to prevent JS injection
-  # (e.g. "John's Notes.md" or a path containing a backslash).
-  local old_safe="${old_path//\\/\\\\}"; old_safe="${old_safe//\'/\\\'}"
-  local new_safe="${new_path//\\/\\\\}"; new_safe="${new_safe//\'/\\\'}"
-
-  obsidian eval "await app.fileManager.renameFile(app.vault.getAbstractFileByPath('$old_safe'), '$new_safe')" 2>/dev/null \
+  obsidian eval "await app.fileManager.renameFile(app.vault.getAbstractFileByPath($old_js), $new_js)" 2>/dev/null \
     || return 1
 }
 
