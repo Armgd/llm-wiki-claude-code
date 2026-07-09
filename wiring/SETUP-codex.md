@@ -14,3 +14,9 @@ command = "npx"
 args = ["-y", "@bitbonsai/mcpvault@latest", "/absolute/path/to/your/vault"]
 ```
 Without MCP the skills fall back to the `obsidian` CLI or file tools.
+
+## Hooks — optional
+Use `wiring/codex/hooks.json` (replace `/ABS/PATH/TO/llm-wiki` with this repo's absolute
+path), placed at `~/.codex/hooks.json` or `.codex/hooks.json`. Verify Codex passes
+`tool_name` / `tool_input.file_path` / `session_id` on stdin — otherwise `wiki-notify.sh`
+records nothing.

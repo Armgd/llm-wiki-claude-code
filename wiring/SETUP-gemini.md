@@ -21,3 +21,9 @@ Alternatively set `context.fileName` in settings to include `AGENTS.md`.
   }
 }
 ```
+
+## Hooks — optional
+Merge `wiring/gemini/settings.hooks.json` into `settings.json` (replace
+`/ABS/PATH/TO/llm-wiki` with this repo's absolute path). Confirm Gemini's
+PostToolUse/Stop event names and stdin field names against the current repo before
+relying on this.

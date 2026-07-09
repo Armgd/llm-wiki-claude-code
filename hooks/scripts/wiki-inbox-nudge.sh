@@ -44,5 +44,5 @@ INBOX_PATH="$VAULT_PATH/$INBOX_FOLDER"
 
 count=$(find "$INBOX_PATH" -maxdepth 1 -name "*.md" -not -name ".*" | wc -l | tr -d ' ')
 if [ "$count" -gt "$THRESHOLD" ]; then
-  echo "[wiki] $count items in Obsidian inbox await processing. Run /llm-wiki:wiki-ingest when ready."
+  echo "[wiki] $count items in Obsidian inbox await processing. Run the wiki-ingest skill when ready."
 fi

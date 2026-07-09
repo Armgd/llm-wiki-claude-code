@@ -19,3 +19,8 @@ OpenCode reads `.agents/skills/` and `.claude/skills/` directly. Point it at thi
   }
 }
 ```
+
+## Hooks — optional, best-effort
+Copy `wiring/opencode/wiki-plugin.js` to `.opencode/plugins/wiki-plugin.js` and replace
+the `ROOT` placeholder (`/ABS/PATH/TO/llm-wiki`) with this repo's absolute path. Event
+names/fields are best-effort — adjust to the installed OpenCode version.

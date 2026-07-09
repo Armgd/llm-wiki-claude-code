@@ -14,10 +14,10 @@ nudge_flag="/tmp/wiki-inbox-nudged.${session_id}"
 
 if [ -f "$manifest" ]; then
   count=$(wc -l < "$manifest" | tr -d ' ')
-  echo "[wiki] Session ending. $count file changes tracked. Review session for wiki-worthy knowledge — run /llm-wiki:wiki-capture if noteworthy work was done."
+  echo "[wiki] Session ending. $count file changes tracked. Review session for wiki-worthy knowledge — run the wiki-capture skill if noteworthy work was done."
   rm -f "$manifest"
 else
-  echo "[wiki] Session ending. Run /llm-wiki:wiki-capture if this session produced noteworthy decisions, findings, or patterns."
+  echo "[wiki] Session ending. Run the wiki-capture skill if this session produced noteworthy decisions, findings, or patterns."
 fi
 
 rm -f "$nudge_flag"
