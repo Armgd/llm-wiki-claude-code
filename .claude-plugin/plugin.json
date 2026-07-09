@@ -6,7 +6,7 @@
 		"name": "Nicolas Gras",
 		"email": "nicolasgras@users.noreply.github.com"
 	},
-	"skills": "./skills",
+	"skills": "./.agents/skills",
 	"repository": "https://github.com/Armgd/llm-wiki-claude-code",
 	"license": "MIT",
 	"keywords": [
