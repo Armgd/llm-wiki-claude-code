@@ -1,130 +1,98 @@
 # llm-wiki
 
-> An LLM-maintained wiki layer for your Obsidian vault. Captures session knowledge, ingests external sources, queries the wiki, and keeps it healthy — all via Claude Code slash commands.
+> An LLM-maintained wiki layer for your Obsidian vault. Captures session knowledge, ingests external sources, queries the wiki, and keeps it healthy — as a set of portable Agent Skills that run on Claude Code, Codex, Gemini CLI, OpenCode, and Pi.
 
-Packaged as a Claude Code plugin. Bundles the [`mcpvault`](https://github.com/bitbonsai/mcpvault) MCP server for Obsidian access.
+The skills are agent-agnostic: they read the vault's schema, then talk to Obsidian through whichever I/O tier is available (CLI, MCP, or plain file tools) and drive the same five operations regardless of which agent is running them.
 
-## What you get
+## Supported agents
 
-Five slash commands (each is a Claude Code skill):
-
-- **`/llm-wiki:wiki-capture`** — at the end of a session, file decisions, findings, and state into your vault as a session log. Promote patterns to standalone knowledge pages.
-- **`/llm-wiki:wiki-ingest <path>`** — turn an inbox article, PDF, or meeting note into a source summary cross-referenced with existing knowledge.
-- **`/llm-wiki:wiki-query <question>`** — ask the wiki a question. Get a synthesized answer with `[[wikilinks]]` as citations.
-- **`/llm-wiki:wiki-lint`** — health check: orphans, broken links, stale TODOs, knowledge gaps. Optional `--fix` for safe repairs.
-- **`/llm-wiki:wiki-configure`** — one-time interactive setup: maps your vault's folders to wiki roles, writes the schema, and tells you how to enable the MCP server.
-
-Three hooks (automatic):
-- Change manifest on every `Write`/`Edit` (drives session capture)
-- Session-end reminder to run `/wiki-capture` if noteworthy work was done
-- Inbox nudge when unprocessed items pile up (configurable threshold in the schema)
-
-## Requirements
-
-- [Claude Code](https://claude.com/claude-code)
-- An Obsidian vault (PARA-shape, names are user-defined)
-- Node.js 18+ (for the bundled `mcpvault` MCP server — runs via `npx`)
-- `bash`, `jq` (for hooks)
+| Agent | Skills | Obsidian I/O | Hooks |
+|---|---|---|---|
+| Claude Code | ✓ (`.agents/skills/` via `plugin.json`) | MCP (bundled `mcpvault` server) or CLI | ✓ native |
+| Codex | ✓ (auto-discovered) | MCP (manual config) or CLI | ✓ config-based |
+| Gemini CLI | ✓ (auto-discovered) | MCP (`${VAR}` supported) or CLI | ✓ config-based |
+| OpenCode | ✓ (auto-discovered) | MCP (`{env:VAR}` supported) or CLI | best-effort |
+| Pi | ✓ (auto-discovered) | CLI only (no MCP) | best-effort |
 
 ## Install
 
-### 1. Install the plugin
+Per-agent setup lives in `wiring/`:
 
-From this repo's marketplace entry (adjust to your distribution method):
+- Claude Code: `/plugin install ./path/to/llm-wiki` (or from a marketplace entry), then run `/llm-wiki:wiki-configure`.
+- Codex: [`wiring/SETUP-codex.md`](wiring/SETUP-codex.md)
+- Gemini CLI: [`wiring/SETUP-gemini.md`](wiring/SETUP-gemini.md)
+- OpenCode: [`wiring/SETUP-opencode.md`](wiring/SETUP-opencode.md)
+- Pi: [`wiring/SETUP-pi.md`](wiring/SETUP-pi.md)
 
-```
-/plugin install llm-wiki
-```
+Every agent needs the vault configured once — run the `wiki-configure` skill (Claude: `/llm-wiki:wiki-configure`) against your vault. It maps folders to wiki roles, writes `{vault}/_System/wiki-schema.md`, and reports which I/O tier it detected.
 
-Or from a local clone during development:
+## The five operations
 
-```
-/plugin install ./path/to/llm-wiki
-```
+- **wiki-capture** — at the end of a session, file decisions, findings, and state into your vault as a session log. Promote patterns to standalone knowledge pages.
+- **wiki-ingest** — turn an inbox article, PDF, or meeting note into a source summary cross-referenced with existing knowledge.
+- **wiki-query** — ask the wiki a question. Get a synthesized answer with `[[wikilinks]]` as citations.
+- **wiki-lint** — health check: orphans, broken links, stale TODOs, knowledge gaps. Optional `--fix` for safe repairs.
+- **wiki-configure** — one-time interactive setup: maps your vault's folders to wiki roles, writes the schema, and tells you how to enable Obsidian access.
 
-### 2. Configure your vault
+On Claude Code these are slash commands (`/llm-wiki:wiki-*`); on Codex/Gemini/OpenCode/Pi they're auto-discovered Agent Skills invoked by name or natural-language trigger.
 
-Open Claude Code in any directory and run:
+Three hooks (Claude native, Codex/Gemini config-based, OpenCode/Pi best-effort):
+- Change manifest on every `Write`/`Edit` (drives session capture)
+- Session-end reminder to run wiki-capture if noteworthy work was done
+- Inbox nudge when unprocessed items pile up (configurable threshold in the schema)
 
-```
-/llm-wiki:wiki-configure
-```
+## Portability: the 3-tier I/O fallback
 
-This walks you through:
-- Locating your Obsidian vault
-- Mapping folders to wiki roles (`inbox`, `projects`, `resources`, `system`, optional `areas`/`notes`)
-- Choosing your project sub-structure convention
-- Setting the inbox-nudge threshold and wiki-source identifier
+Every skill sources `shared/scripts/wiki-io.sh`, which probes for Obsidian access in order and exports `WIKI_IO_BACKEND`:
 
-It writes:
-- `~/.config/llm-wiki/vault` — a one-line file with your vault's absolute path
-- `{vault}/_System/wiki-schema.md` — the filled-in schema describing your vault's conventions
-- `{vault}/_System/Templates/*.md` — Obsidian Templater files for session logs, knowledge pages, and source summaries (only created if missing)
-- `{vault}/_System/wiki-log.md` — the append-only operation log (only created if missing)
+1. **CLI** — the `obsidian` CLI, if installed. Works everywhere, including Pi (no MCP support).
+2. **MCP** — the `obsidian` MCP server (bundled for Claude via `mcpvault`; manual config for Codex/Gemini/OpenCode), when the CLI isn't available.
+3. **File tools** — plain Read/Write/Glob/Grep, when neither CLI nor MCP is available.
 
-### 3. Enable the Obsidian MCP server
-
-The plugin bundles the `mcpvault` MCP server in `.claude-plugin/plugin.json`. It needs your vault path via the `OBSIDIAN_VAULT_PATH` environment variable.
-
-Add this to your shell profile (`~/.zshrc`, `~/.bashrc`, or equivalent), then restart Claude Code:
-
-```bash
-export OBSIDIAN_VAULT_PATH="/absolute/path/to/your/vault"
-```
-
-Without this env var, the MCP server won't start — but the `/wiki-*` commands still work via file-based fallbacks (Glob, Read, Write, Grep).
-
-### 4. Try it
-
-- In a work session, run `/llm-wiki:wiki-capture` to file the session.
-- Put an article in your inbox and run `/llm-wiki:wiki-ingest "00 - Inbox/<article>.md"` to summarize it.
-- Ask `/llm-wiki:wiki-query "What do we know about X?"` for a synthesized answer.
-- Run `/llm-wiki:wiki-lint` weekly for a health report.
-
-## Reconfiguring
-
-Re-run `/llm-wiki:wiki-configure` any time. It detects the existing configuration, shows a diff of proposed changes, and applies only what differs.
-
-## Uninstall
-
-```
-/plugin remove llm-wiki
-```
-
-This removes the plugin, its hooks, and the MCP server registration. Your vault content (schema, logs, notes) is left untouched. If you want to remove the schema and wiki-log too:
-
-```bash
-rm ~/.config/llm-wiki/vault
-rm {vault}/_System/wiki-schema.md
-# Keep wiki-log.md and notes — they're your content.
-```
+Because no skill body hardcodes a specific I/O mechanism, the same `.agents/skills/` directory runs unmodified on any agent that supports the Agent Skills convention — the skill just adapts to whichever tier it finds at runtime.
 
 ## Repo layout
 
 ```
 .claude-plugin/
-  plugin.json             # manifest + bundled mcpvault MCP server
-skills/
+  plugin.json               # Claude manifest — skills path + bundled mcpvault MCP server
+.agents/skills/              # canonical skill bodies, auto-discovered by Codex/Gemini/OpenCode/Pi
   wiki-capture/SKILL.md
   wiki-ingest/SKILL.md
   wiki-query/SKILL.md
   wiki-lint/SKILL.md
-  wiki-configure/SKILL.md
+  wiki-configure/
+    SKILL.md
+    vault-files/            # seed files copied into {vault}/_System/ by wiki-configure
+      wiki-schema.md.template
+      wiki-log.md
+      AGENTS.md.template
+      Templates/*.md
+shared/                      # canonical source of shared skill payload (kept in sync into each skill dir)
+  references/
+    setup.md                # shared bootstrap, read by each skill
+    cli-patterns.md          # obsidian CLI usage patterns
+  scripts/
+    wiki-io.sh               # 3-tier I/O probe + CLI wrappers
 hooks/
-  hooks.json              # references scripts via ${CLAUDE_PLUGIN_ROOT}
+  hooks.json                # Claude hook config (${CLAUDE_PLUGIN_ROOT})
   scripts/
     wiki-notify.sh
     wiki-stop.sh
     wiki-inbox-nudge.sh
-references/
-  setup.md                # shared bootstrap, read by each /wiki-* skill
-vault-files/              # seed files copied into {vault}/_System/ by /wiki-configure
-  wiki-schema.md.template
-  wiki-log.md
-  Templates/*.md
-test-fixtures/vault/      # minimal PARA vault for manual e2e walkthroughs
-docs/superpowers/         # design spec + implementation plan (history)
-reference.md              # background and rationale
+wiring/                      # per-agent setup docs + config/plugin files
+  SETUP-codex.md / SETUP-gemini.md / SETUP-opencode.md / SETUP-pi.md
+  codex/hooks.json
+  gemini/settings.hooks.json
+  opencode/wiki-plugin.js
+  pi/wiki-extension.ts
+AGENTS.md                    # instructions all agents read (Codex/OpenCode/Pi natively)
+CLAUDE.md / GEMINI.md        # shims that import AGENTS.md
+scripts/
+  sync-skills.sh             # copies shared/ into every .agents/skills/*/
+  check.sh                   # aggregate validation (see Development)
+test-fixtures/vault/         # minimal PARA vault for manual e2e walkthroughs
+reference.md                 # background and rationale
 ```
 
 ## Design
@@ -132,26 +100,35 @@ reference.md              # background and rationale
 Two layers:
 
 - **Schema** — `{vault}/_System/wiki-schema.md` describes your vault's folder conventions, page types, and operation workflows. This is the single source of truth for everything the skills need to know about your vault. Edit it to change behavior.
-- **Skills** — thin adapters in `skills/wiki-*/SKILL.md`. Each skill runs a shared bootstrap (`references/setup.md`) to load the schema, then executes its command using Obsidian MCP and file tools.
+- **Skills** — thin adapters in `.agents/skills/wiki-*/SKILL.md`. Each skill runs a shared bootstrap (`references/setup.md`, synced from `shared/`) to load the schema, then executes its command using the detected I/O tier.
 
-All vault-specific values (paths, folder names, thresholds) live in the schema, not the plugin code. The only thing outside the schema is `~/.config/llm-wiki/vault`, which tells hooks where to find the vault.
-
-Full design spec: `docs/superpowers/specs/2026-04-15-llm-wiki-distribution-design.md`.
+All vault-specific values (paths, folder names, thresholds) live in the schema, not the skill code. The only thing outside the schema is `~/.config/llm-wiki/vault`, which tells hooks where to find the vault.
 
 ## Development
 
-### Testing
-
-Walk through `/llm-wiki:wiki-configure` against `test-fixtures/vault/` for first-time-setup flow. For each wiki command, use the fixture vault as the target and verify the expected files appear.
-
-Hook scripts can be syntax-checked with `bash -n hooks/scripts/*.sh`.
-
-### Plugin structure validation
+Skill bodies pull shared references/scripts from `shared/` — never edit the copies inside `.agents/skills/*/references` or `.agents/skills/*/scripts` directly. Edit `shared/` and resync:
 
 ```bash
-jq -e . .claude-plugin/plugin.json >/dev/null && echo "manifest valid"
-jq -e . hooks/hooks.json >/dev/null && echo "hooks valid"
+scripts/sync-skills.sh          # sync shared/ into every skill
+scripts/sync-skills.sh --check  # verify no drift (fails if a skill copy differs)
 ```
+
+Run the aggregate check before committing:
+
+```bash
+bash scripts/check.sh
+```
+
+It validates plugin/hooks/wiring JSON, shell syntax, skill sync, the OpenCode plugin, and that no skill or shared file leaks the Claude-only `${CLAUDE_PLUGIN_ROOT}` token.
+
+Walk through the `wiki-configure` skill against `test-fixtures/vault/` for first-time-setup flow. For each wiki command, use the fixture vault as the target and verify the expected files appear.
+
+## Requirements
+
+- `bash`, `jq` — required for hooks, and for the obsidian-CLI I/O tier (`wiki_cli_move` uses `jq` to JSON-encode paths safely).
+- An Obsidian vault (PARA-shape, names are user-defined)
+- Node.js 18+ if using the MCP tier (bundled `mcpvault` server runs via `npx`)
+- One of: Claude Code, Codex, Gemini CLI, OpenCode, or Pi
 
 ## License
 
