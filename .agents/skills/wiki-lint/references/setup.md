@@ -2,6 +2,13 @@
 
 Every wiki operation (`/wiki-capture`, `/wiki-ingest`, `/wiki-query`, `/wiki-lint`) shares this bootstrap. Each skill's SKILL.md instructs the LLM to read this file first.
 
+> **Resolving bundled files.** This file and the helpers it references (`scripts/wiki-io.sh`,
+> `references/cli-patterns.md`) live in the running skill's directory. A Bash step's working
+> directory is the user's project, NOT the skill dir, so you must use an absolute path.
+> The calling SKILL.md sets `SKILL_DIR` to the skill's absolute directory before invoking
+> this bootstrap (Claude Code fills it from `${CLAUDE_SKILL_DIR}`; other hosts substitute the
+> skill's absolute path they were given). Every `source`/read below uses `$SKILL_DIR`.
+
 ## Bootstrap Steps
 
 > **"Abort" semantics** — when a bootstrap step below says *abort with: `<message>`*, do exactly this: print the message to the user and stop the skill. Do not call any write tools, do not attempt a fallback path, do not guess a vault path.
@@ -77,11 +84,11 @@ Every wiki operation (`/wiki-capture`, `/wiki-ingest`, `/wiki-query`, `/wiki-lin
 llm-wiki uses a three-tier I/O strategy. At bootstrap, the skill probes backends in order and commits to the first available one for the entire workflow.
 
 **Tier 1 — Obsidian CLI** (preferred):
-- Runs `source "${CLAUDE_PLUGIN_ROOT}/scripts/wiki-io.sh" && wiki_io_probe "${VAULT_PATH}"` via Bash
+- Runs `source "$SKILL_DIR/scripts/wiki-io.sh" && wiki_io_probe "${VAULT_PATH}"` via Bash
 - If `WIKI_IO_BACKEND` is `"cli"`, use CLI commands for all note operations
 - **Advantage**: output goes to stdout, enabling `| head`, `| grep`, `| wc -l` for context management
 - **Requirement**: user has enabled CLI in Obsidian (Settings → General → Command line interface) and the Obsidian desktop app is running
-- Consult `${CLAUDE_PLUGIN_ROOT}/references/cli-patterns.md` for command syntax
+- Consult `$SKILL_DIR/references/cli-patterns.md` for command syntax
 
 **Tier 2 — Obsidian MCP** (fallback):
 - If CLI is unavailable (user hasn't enabled it, or Obsidian is not running), attempt `mcp__obsidian__list_directory` on the vault root
@@ -114,7 +121,7 @@ The `io.headless` schema field records whether `ob` was detected at configure ti
 Run this Bash block once at the start of every skill (after resolving VAULT_PATH):
 
 ```bash
-source "${CLAUDE_PLUGIN_ROOT}/scripts/wiki-io.sh"
+source "$SKILL_DIR/scripts/wiki-io.sh"
 wiki_io_probe "${VAULT_PATH}"
 echo "Backend: $WIKI_IO_BACKEND"
 ```

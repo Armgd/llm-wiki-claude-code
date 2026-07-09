@@ -2,7 +2,7 @@
 # wiki-io.sh — Shared I/O helper for llm-wiki skills
 #
 # Usage (from SKILL.md Bash steps):
-#   source "${CLAUDE_PLUGIN_ROOT}/scripts/wiki-io.sh"
+#   source "$SKILL_DIR/scripts/wiki-io.sh"   # SKILL_DIR = abs path of the skill dir
 #   wiki_io_probe "${VAULT_PATH}"
 #   echo "$WIKI_IO_BACKEND"   # "cli" | "mcp" | "filetool"
 #
@@ -165,9 +165,15 @@ wiki_cli_move() {
   local old_path="${1:?wiki_cli_move requires old_path}"
   local new_path="${2:?wiki_cli_move requires new_path}"
 
-  # Escape single quotes to prevent JS injection (e.g. "John's Notes.md")
-  local old_safe="${old_path//\'/\\\'}"
-  local new_safe="${new_path//\'/\\\'}"
+  # Reject control characters / newlines that could break out of the eval string.
+  case "$old_path$new_path" in
+    *[[:cntrl:]]*) return 1 ;;
+  esac
+
+  # Escape backslashes first, then single quotes, to prevent JS injection
+  # (e.g. "John's Notes.md" or a path containing a backslash).
+  local old_safe="${old_path//\\/\\\\}"; old_safe="${old_safe//\'/\\\'}"
+  local new_safe="${new_path//\\/\\\\}"; new_safe="${new_safe//\'/\\\'}"
 
   obsidian eval "await app.fileManager.renameFile(app.vault.getAbstractFileByPath('$old_safe'), '$new_safe')" 2>/dev/null \
     || return 1
