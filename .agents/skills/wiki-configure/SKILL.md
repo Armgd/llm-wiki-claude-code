@@ -257,10 +257,11 @@ On confirmation:
 
 7. **Create any named role folders** that don't yet exist in the vault (ask before creating each one).
 
-8. **Offer to scaffold a vault-root `CLAUDE.md`** (freeform per-vault LLM guidance — see §Read optional vault-root override file in `references/setup.md`):
-   - Skip silently if `{VAULT_PATH}/CLAUDE.md` already exists. Never overwrite.
-   - Ask: `Scaffold a vault-root CLAUDE.md for vault-specific LLM guidance? [y/N]` — default is no.
-   - On accept: copy `$SKILL_DIR/vault-files/CLAUDE.md.template` verbatim to `{VAULT_PATH}/CLAUDE.md`. No template substitution — the file is freeform context the user fills in.
+8. **Offer to scaffold a vault-root `AGENTS.md`** (freeform per-vault LLM guidance — see §Read optional vault-root override file in `references/setup.md`):
+   - Skip silently if `{VAULT_PATH}/AGENTS.md` already exists. Never overwrite.
+   - Ask: `Scaffold a vault-root AGENTS.md for vault-specific LLM guidance? [y/N]` — default is no.
+   - On accept: copy `$SKILL_DIR/vault-files/AGENTS.md.template` verbatim to `{VAULT_PATH}/AGENTS.md`. No template substitution — the file is freeform context the user fills in.
+     Codex/OpenCode/Pi read `AGENTS.md` natively; Claude/Gemini users who want vault-dir context can add a one-line `@AGENTS.md` `CLAUDE.md`/`GEMINI.md` themselves — mention this, don't auto-create it.
 
 ### 9. Reconfigure diff (only if this is a reconfigure flow)
 

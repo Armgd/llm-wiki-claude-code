@@ -1,4 +1,4 @@
-# CLAUDE.md — vault-specific LLM guidance
+# AGENTS.md — vault-specific LLM guidance
 
 > Freeform context the wiki schema can't express. Read by every llm-wiki skill during bootstrap.
 > The schema (`_System/wiki-schema.md`) is the structural source of truth — folder roles, page types, and protected paths live there.
