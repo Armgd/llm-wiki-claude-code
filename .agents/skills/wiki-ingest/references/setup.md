@@ -15,13 +15,13 @@ Every wiki operation (`/wiki-capture`, `/wiki-ingest`, `/wiki-query`, `/wiki-lin
 
 1. **Resolve the vault path.**
    - Read the single-line file `~/.config/llm-wiki/vault`.
-   - If the file is missing or empty, abort with: `llm-wiki vault not configured — run /llm-wiki:wiki-configure first.`
+   - If the file is missing or empty, abort with: `llm-wiki vault not configured — run the wiki-configure skill (Claude: /llm-wiki:wiki-configure) first.`
    - The content is the absolute path to the user's Obsidian vault root. Call this `VAULT_PATH`.
 
 2. **Read the schema.**
    - Read `{VAULT_PATH}/_System/wiki-schema.md`.
-   - If missing, abort with: `Wiki schema not found at {VAULT_PATH}/_System/wiki-schema.md — run /llm-wiki:wiki-configure.`
-   - If the file contains any `{{PLACEHOLDER}}` markers (e.g. `{{VAULT_PATH}}`, `{{INBOX_FOLDER}}`), abort with: `Schema not yet filled in — run /llm-wiki:wiki-configure.`
+   - If missing, abort with: `Wiki schema not found at {VAULT_PATH}/_System/wiki-schema.md — run the wiki-configure skill (Claude: /llm-wiki:wiki-configure).`
+   - If the file contains any `{{PLACEHOLDER}}` markers (e.g. `{{VAULT_PATH}}`, `{{INBOX_FOLDER}}`), abort with: `Schema not yet filled in — run the wiki-configure skill (Claude: /llm-wiki:wiki-configure).`
 
 3. **Parse the `Vault Configuration` section of the schema.**
 
@@ -63,7 +63,7 @@ Every wiki operation (`/wiki-capture`, `/wiki-ingest`, `/wiki-query`, `/wiki-lin
    - `io.qmd` — whether qmd is installed and the vault is registered as a collection. When `true`, skills prefer `qmd query` for content search.
 
 4. **Required vs optional roles.**
-   - Required: `inbox`, `projects`, `resources`, `system`. If any of these is missing or empty, abort: `Schema missing required folder role {role} — re-run /llm-wiki:wiki-configure.`
+   - Required: `inbox`, `projects`, `resources`, `system`. If any of these is missing or empty, abort: `Schema missing required folder role {role} — re-run the wiki-configure skill (Claude: /llm-wiki:wiki-configure).`
    - Optional: `areas`, `notes`. These may be empty strings.
      - If `folders.areas` is empty → **skip MOC updates silently** (no error, no prompt).
      - If `folders.notes` is empty → **ask the user** where to file unclassified content instead of defaulting to a directory.
@@ -74,10 +74,10 @@ Every wiki operation (`/wiki-capture`, `/wiki-ingest`, `/wiki-query`, `/wiki-lin
    - Optional: `io.*` fields. If `io` section is missing entirely (pre-migration schemas), treat as `preference: auto`, `cli_path: ""`, `headless: false`, `qmd: false`. This ensures backward compatibility with schemas created before the CLI migration.
 
 5. **Read optional vault-root override file.**
-   - Check for `{VAULT_PATH}/CLAUDE.md`.
+   - Check for `{VAULT_PATH}/AGENTS.md`. If absent, fall back to `{VAULT_PATH}/CLAUDE.md` (for vaults set up before the rename).
    - If present, read it in full and treat its contents as additional advisory guidance for the current operation — vault-specific notes, conventions, off-limits zones beyond `folders.protected`, or anything the schema can't express.
-   - This file is freeform; it does NOT override the schema. Structural decisions (folder roles, page types, protected paths) come from the schema. `CLAUDE.md` is for context the schema can't express.
-   - If missing, proceed silently — this file is optional.
+   - This file is freeform; it does NOT override the schema. Structural decisions (folder roles, page types, protected paths) come from the schema. `AGENTS.md` is for context the schema can't express.
+   - If neither exists, proceed silently — this file is optional.
 
 ## I/O strategy — three-tier probe
 
@@ -242,7 +242,7 @@ If `folders.protected` is non-empty, every write, move, or delete operation must
 If a planned write target falls inside a protected path, abort with:
 
 ```
-Refusing to modify `{path}` — listed in `folders.protected`. Update the schema via /llm-wiki:wiki-configure to allow this folder, or pick a different destination.
+Refusing to modify `{path}` — listed in `folders.protected`. Update the schema via the wiki-configure skill (Claude: /llm-wiki:wiki-configure) to allow this folder, or pick a different destination.
 ```
 
 **Applies to**: `wiki-capture` (session log, knowledge pages, enrichments), `wiki-ingest` (source summary, knowledge pages, archive move), `wiki-lint --fix` (orphan cross-links, MOC updates, index rebuild). Each skill's workflow points to this section.
