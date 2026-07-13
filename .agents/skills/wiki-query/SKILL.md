@@ -1,6 +1,6 @@
 ---
 name: wiki-query
-description: Use this skill to query an Obsidian-based LLM wiki with a natural-language question and get a synthesized answer with wikilink citations. Triggers when the user runs the wiki-query skill (Claude: `/llm-wiki:wiki-query`), asks "what does the wiki say about X", "search my wiki for Y", or similar knowledge-lookup requests. Optionally offers to file substantial answers back into the wiki as knowledge pages.
+description: "Use this skill to query an Obsidian-based LLM wiki with a natural-language question and get a synthesized answer with wikilink citations. Triggers when the user runs the wiki-query skill (Claude: `/llm-wiki:wiki-query`), asks \"what does the wiki say about X\", \"search my wiki for Y\", or similar knowledge-lookup requests. Optionally offers to file substantial answers back into the wiki as knowledge pages."
 argument-hint: "<natural-language-question>"
 allowed-tools: Read, Grep, Glob, Bash, Write, mcp__obsidian__search_notes, mcp__obsidian__read_note, mcp__obsidian__read_multiple_notes, mcp__obsidian__get_notes_info, mcp__obsidian__write_note, mcp__obsidian__list_directory
 ---

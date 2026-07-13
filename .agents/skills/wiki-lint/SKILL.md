@@ -1,6 +1,6 @@
 ---
 name: wiki-lint
-description: Use this skill to health-check an Obsidian-based LLM wiki — detect orphans, broken wikilinks, stale session-log TODOs, unprocessed inbox items, and knowledge gaps. Triggers when the user runs the wiki-lint skill (Claude: `/llm-wiki:wiki-lint`), asks to "audit my wiki", "run a wiki health check", or similar maintenance requests. Supports an optional --fix flag for safe repairs.
+description: "Use this skill to health-check an Obsidian-based LLM wiki \u2014 detect orphans, broken wikilinks, stale session-log TODOs, unprocessed inbox items, and knowledge gaps. Triggers when the user runs the wiki-lint skill (Claude: `/llm-wiki:wiki-lint`), asks to \"audit my wiki\", \"run a wiki health check\", or similar maintenance requests. Supports an optional --fix flag for safe repairs."
 argument-hint: "[--fix]"
 allowed-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__obsidian__search_notes, mcp__obsidian__read_note, mcp__obsidian__get_vault_stats, mcp__obsidian__list_directory, mcp__obsidian__get_frontmatter, mcp__obsidian__get_notes_info
 ---

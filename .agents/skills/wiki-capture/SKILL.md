@@ -1,6 +1,6 @@
 ---
 name: wiki-capture
-description: Use this skill to capture session knowledge into an Obsidian-based LLM wiki. Triggers when the user runs the wiki-capture skill (Claude: `/llm-wiki:wiki-capture`), asks to "capture this session", "file this session into the wiki", or similar end-of-session knowledge persistence requests. Produces a session log in the vault plus optional knowledge page creation and enrichments.
+description: "Use this skill to capture session knowledge into an Obsidian-based LLM wiki. Triggers when the user runs the wiki-capture skill (Claude: `/llm-wiki:wiki-capture`), asks to \"capture this session\", \"file this session into the wiki\", or similar end-of-session knowledge persistence requests. Produces a session log in the vault plus optional knowledge page creation and enrichments."
 argument-hint: "[project-name]"
 allowed-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__obsidian__search_notes, mcp__obsidian__read_note, mcp__obsidian__read_multiple_notes, mcp__obsidian__write_note, mcp__obsidian__patch_note, mcp__obsidian__update_frontmatter, mcp__obsidian__get_frontmatter, mcp__obsidian__list_directory, mcp__obsidian__get_notes_info
 ---

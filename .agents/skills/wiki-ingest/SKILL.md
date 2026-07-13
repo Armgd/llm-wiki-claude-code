@@ -1,6 +1,6 @@
 ---
 name: wiki-ingest
-description: Use this skill to ingest an external source (article, PDF, meeting notes) into an Obsidian-based LLM wiki. Triggers when the user runs the wiki-ingest skill (Claude: `/llm-wiki:wiki-ingest`), asks to "ingest this article", "summarize and file this source", or similar source-processing requests. Produces a source summary page cross-referenced with existing knowledge and moves the original to the vault's archive.
+description: "Use this skill to ingest an external source (article, PDF, meeting notes) into an Obsidian-based LLM wiki. Triggers when the user runs the wiki-ingest skill (Claude: `/llm-wiki:wiki-ingest`), asks to \"ingest this article\", \"summarize and file this source\", or similar source-processing requests. Produces a source summary page cross-referenced with existing knowledge and moves the original to the vault's archive."
 argument-hint: "<path-to-source-note-relative-to-vault>"
 allowed-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__obsidian__search_notes, mcp__obsidian__read_note, mcp__obsidian__write_note, mcp__obsidian__patch_note, mcp__obsidian__update_frontmatter, mcp__obsidian__get_frontmatter, mcp__obsidian__list_directory, mcp__obsidian__move_note, mcp__obsidian__move_file
 ---

@@ -1,6 +1,6 @@
 ---
 name: wiki-configure
-description: Use this skill to set up (or reconfigure) the llm-wiki plugin for a user's Obsidian vault. Triggers when the user runs the wiki-configure skill (Claude: `/llm-wiki:wiki-configure`), asks to "set up llm-wiki", "configure the wiki plugin", or after first installation of the plugin. Inventories the vault, asks the user to map folders to wiki roles, writes the vault path file and the filled-in schema, and instructs the user how to set the OBSIDIAN_VAULT_PATH env var for the bundled MCP server.
+description: "Use this skill to set up (or reconfigure) the llm-wiki plugin for a user's Obsidian vault. Triggers when the user runs the wiki-configure skill (Claude: `/llm-wiki:wiki-configure`), asks to \"set up llm-wiki\", \"configure the wiki plugin\", or after first installation of the plugin. Inventories the vault, asks the user to map folders to wiki roles, writes the vault path file and the filled-in schema, and instructs the user how to set the OBSIDIAN_VAULT_PATH env var for the bundled MCP server."
 allowed-tools: Read, Write, Edit, Glob, Bash
 ---
 
