@@ -7,11 +7,11 @@ tags: [wiki, schema, system]
 
 # Wiki Schema
 
-> System-agnostic contract for LLM wiki operations. Any LLM that can read markdown can follow this schema. Adapter skills (Claude Code, Codex, Gemini) implement the operations using their own tool layer.
+> System-agnostic contract for LLM wiki operations. Any LLM that can read markdown can follow this schema. Adapter skills (Claude Code, Antigravity, Codex, OpenCode, Pi, ...) implement the operations using their own tool layer.
 
 ## Vault Configuration
 
-- vault_path: test-fixtures/vault
+- vault_path: /ABS/PATH/TO/llm-wiki/test-fixtures/vault
 - wiki_source: claude-code
 - inbox_threshold: 5
 - io:
@@ -26,10 +26,12 @@ tags: [wiki, schema, system]
   - system: "_System"            # required
   - areas: "02 - Areas"              # optional (empty string if unused)
   - notes: ""              # optional (empty string if unused)
+  - protected: ["_System/Templates", "_System/Archive/Sources"]  # optional — vault-relative paths skills must never write/move/delete into
 - paths:
   - wiki_log: "_System/wiki-log.md"
   - templates: "_System/Templates"
   - archive_sources: "_System/Archive/Sources"
+  - index: ""                        # optional — path to the index note (e.g. "Home.md"). Empty string to skip index operations.
 
 ## Project Mapping
 
@@ -118,6 +120,37 @@ Generated when ingesting an external source (article, PDF, meeting notes).
 - `## Original` — link to the archived source: `[[{paths.archive_sources}/<filename>|Original]]`
 
 **Guidance**: Summaries should be opinionated — highlight what matters for the vault owner's context, not just neutral bullet points. Flag contradictions with existing content explicitly.
+
+### index (managed block inside an existing note)
+
+The index is a content-oriented catalog of all wiki-generated knowledge and source-summary pages. The LLM reads it first when answering queries, and updates it on every `capture`, `ingest`, and `query → file` operation. This is the "read the index before searching" pattern from the reference.
+
+**Location**: `{paths.index}` — a user-facing note (most commonly `Home.md` at vault root, or a standalone `_System/wiki-index.md`). If `{paths.index}` is empty, the skill skips all index operations silently.
+
+**Managed block format** — the skill rewrites only the content between markers. Everything outside is inviolable (Dataview queries, user-authored sections, frontmatter, etc.):
+
+    <!-- llm-wiki:index:start -->
+    ## Wiki Index
+
+    > Auto-maintained by llm-wiki. The block between the `llm-wiki:index:start` and `llm-wiki:index:end` markers is regenerated on every wiki operation. Edits inside will be overwritten; edits outside the markers are preserved.
+
+    ### Knowledge
+
+    **<domain>**
+    - [[<page>]] — one-line summary
+
+    ### Sources
+
+    **<domain>**
+    - [[<page>]] — one-line summary
+    <!-- llm-wiki:index:end -->
+
+**Rules**:
+- Session logs are **never** listed in the index — they're chronological and belong to the wiki log.
+- Entries group by page type (`Knowledge`, `Sources`), then by `domain` frontmatter field.
+- One-line summary comes from the page's introductory paragraph or source's Key Claims (the LLM condenses).
+- If markers are missing, the skill appends a fresh managed block at the end of the file after a `---` separator. It never inserts into the middle of existing content.
+- When regenerating, the skill reads the full list of wiki-sourced pages (`wiki-source:` frontmatter), sorts by type then domain then title, and rewrites the block deterministically.
 
 ### enrichment (inline, not a new page)
 

@@ -3,12 +3,17 @@ set -euo pipefail
 here="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$here"
 
-# 1. sync populates every skill
+# Always leave the tree in sync, even when an assertion fails mid-run.
+trap 'bash scripts/sync-skills.sh >/dev/null' EXIT
+
+# 1. sync populates every skill (iterate the actual shared payload, so new
+#    shared files are covered automatically)
 bash scripts/sync-skills.sh
 for s in .agents/skills/*/; do
-  diff -q shared/references/setup.md "$s/references/setup.md" >/dev/null
-  diff -q shared/references/cli-patterns.md "$s/references/cli-patterns.md" >/dev/null
-  diff -q shared/scripts/wiki-io.sh "$s/scripts/wiki-io.sh" >/dev/null
+  for src in shared/references/* shared/scripts/*; do
+    [ -e "$src" ] || continue
+    diff -q "$src" "$s${src#shared/}" >/dev/null
+  done
 done
 echo "PASS: sync populated all skills"
 

@@ -23,8 +23,9 @@ _probe_cli() {
   if ! command -v obsidian &>/dev/null; then
     return 1
   fi
-  # Smoke test: run obsidian help; ignore output and errors.
-  obsidian help &>/dev/null || true
+  # Smoke test: `obsidian help` must succeed (the CLI talks to the running
+  # desktop app; a failure here means the CLI tier is unusable right now).
+  obsidian help &>/dev/null || return 1
   return 0
 }
 

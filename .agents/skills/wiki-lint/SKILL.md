@@ -2,7 +2,7 @@
 name: wiki-lint
 description: "Use this skill to health-check an Obsidian-based LLM wiki \u2014 detect orphans, broken wikilinks, stale session-log TODOs, unprocessed inbox items, and knowledge gaps. Triggers when the user runs the wiki-lint skill (Claude: `/llm-wiki:wiki-lint`), asks to \"audit my wiki\", \"run a wiki health check\", or similar maintenance requests. Supports an optional --fix flag for safe repairs."
 argument-hint: "[--fix]"
-allowed-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__obsidian__search_notes, mcp__obsidian__read_note, mcp__obsidian__get_vault_stats, mcp__obsidian__list_directory, mcp__obsidian__get_frontmatter, mcp__obsidian__get_notes_info
+allowed-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__obsidian__search_notes, mcp__obsidian__read_note, mcp__obsidian__get_vault_stats, mcp__obsidian__list_directory, mcp__obsidian__get_frontmatter, mcp__obsidian__get_notes_info, mcp__plugin_llm-wiki_obsidian__search_notes, mcp__plugin_llm-wiki_obsidian__read_note, mcp__plugin_llm-wiki_obsidian__get_vault_stats, mcp__plugin_llm-wiki_obsidian__list_directory, mcp__plugin_llm-wiki_obsidian__get_frontmatter, mcp__plugin_llm-wiki_obsidian__get_notes_info
 ---
 
 # wiki-lint skill (Claude: `/llm-wiki:wiki-lint`)
@@ -13,7 +13,7 @@ Health-check the user's Obsidian wiki and report (optionally repair) issues.
 
 **Resolve the skill directory first.** Set `SKILL_DIR` to the absolute path of this
 skill's directory. In Claude Code, use `${CLAUDE_SKILL_DIR}` (your host substitutes it).
-On Codex, Gemini, OpenCode, or Pi, substitute the absolute skill path your host reported
+On other hosts (Antigravity, Codex, OpenCode, Pi, ...), substitute the absolute skill path your host reported
 when it loaded this skill. A Bash step's working directory is the user's project, not the
 skill dir, so every bundled-file reference below uses `$SKILL_DIR` — never a bare relative path.
 
@@ -30,14 +30,17 @@ Optional `--fix` flag to auto-apply safe repairs (add cross-references, link orp
    **Probe I/O backend** — run via Bash:
    ```bash
    SKILL_DIR="${CLAUDE_SKILL_DIR}"   # Claude fills this; other hosts: set to the abs skill dir
+   VAULT_PATH="<vault path>"          # substitute the value resolved by the bootstrap
    source "$SKILL_DIR/scripts/wiki-io.sh"
    wiki_io_probe "${VAULT_PATH}"
    echo "Backend: $WIKI_IO_BACKEND"
    ```
+   (wiki-lint intentionally skips the qmd probe — its checks are structural, not content search.)
    - If `WIKI_IO_BACKEND` is `"cli"` → use CLI for all read/search/write operations. Consult `$SKILL_DIR/references/cli-patterns.md` for syntax.
    - If `WIKI_IO_BACKEND` is `"mcp"` → if this agent exposes Obsidian MCP tools
-     (Claude/Gemini/OpenCode name them `mcp__obsidian__*`; other agents may not have
-     them at all), probe `mcp__obsidian__list_directory` on the vault root and use MCP
+     (standalone servers expose `mcp__obsidian__*`; the Claude Code plugin-bundled
+     server exposes `mcp__plugin_llm-wiki_obsidian__*`; other agents may not have
+     them at all), probe the `list_directory` tool on the vault root and use MCP
      if it responds. Otherwise use file tools (Read/Write/Edit/Grep/Glob). Agents
      without MCP (e.g. Pi) always land on the CLI or file-tool tier — this is expected.
    - Commit to one tier for the entire workflow.

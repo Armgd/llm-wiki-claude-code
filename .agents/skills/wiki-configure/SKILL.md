@@ -1,7 +1,7 @@
 ---
 name: wiki-configure
 description: "Use this skill to set up (or reconfigure) the llm-wiki plugin for a user's Obsidian vault. Triggers when the user runs the wiki-configure skill (Claude: `/llm-wiki:wiki-configure`), asks to \"set up llm-wiki\", \"configure the wiki plugin\", or after first installation of the plugin. Inventories the vault, asks the user to map folders to wiki roles, writes the vault path file and the filled-in schema, and instructs the user how to set the OBSIDIAN_VAULT_PATH env var for the bundled MCP server."
-allowed-tools: Read, Write, Edit, Glob, Bash
+allowed-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__obsidian__list_directory, mcp__obsidian__search_notes, mcp__plugin_llm-wiki_obsidian__list_directory, mcp__plugin_llm-wiki_obsidian__search_notes
 ---
 
 # wiki-configure skill (Claude: `/llm-wiki:wiki-configure`)
@@ -11,7 +11,7 @@ Interactive setup for the llm-wiki plugin. Unlike the other wiki commands, this 
 ## Resolve the skill directory first
 
 Set `SKILL_DIR` to the absolute path of this skill's directory. In Claude Code, use
-`${CLAUDE_SKILL_DIR}` (your host substitutes it). On Codex, Gemini, OpenCode, or Pi,
+`${CLAUDE_SKILL_DIR}` (your host substitutes it). On other hosts (Antigravity, Codex, OpenCode, Pi, ...),
 substitute the absolute skill path your host reported when it loaded this skill. A Bash
 step's working directory is the user's project, not the skill dir, so every bundled-file
 reference below uses `$SKILL_DIR` — never a bare relative path. Any Bash step that copies
@@ -103,8 +103,12 @@ Probe for qmd, a local semantic search engine for markdown files:
 
 2. **If qmd is found, register the vault as a collection**:
    ```bash
-   # Check if vault is already a collection
-   if qmd collection list 2>/dev/null | grep -qF "$VAULT_PATH"; then
+   # Check if vault is already a collection. qmd 2.1.0+ omits paths from
+   # `collection list`, so use the probe from wiki-io.sh (it enumerates
+   # collections and matches on `collection show` output).
+   SKILL_DIR="${CLAUDE_SKILL_DIR}"   # Claude fills this; other hosts: set to the abs skill dir
+   source "$SKILL_DIR/scripts/wiki-io.sh"
+   if _probe_qmd "$VAULT_PATH"; then
      echo "Vault already registered as a qmd collection"
    else
      echo "Registering vault as qmd collection..."
@@ -130,7 +134,7 @@ Probe for qmd, a local semantic search engine for markdown files:
 
 ### 3. Inventory the vault
 
-- Try `mcp__obsidian__list_directory` on the vault root.
+- Try the `list_directory` MCP tool on the vault root (standalone servers expose it as `mcp__obsidian__list_directory`; the Claude Code plugin-bundled server as `mcp__plugin_llm-wiki_obsidian__list_directory`).
 - If MCP is unavailable (expected on first run), use `Glob` with the pattern `{vault}/*` to list top-level folders.
 - Present the list of folders found, with file counts per folder (use `Glob '{folder}/*.md'` to count).
 
@@ -180,7 +184,7 @@ The index is an optional content-oriented catalog the LLM maintains inside a use
   - **Found one** → "You have an index note at `{path}`. Use this as the wiki index? [Y/n]" Enter accepts.
   - **Found none** → "No index note detected. Options:
     - (a) Create `Home.md` at vault root (blank, with `type: index` frontmatter + managed block)
-    - (b) Use a machine-only index at `_System/wiki-index.md`
+    - (b) Use a machine-only index at `{SYSTEM_FOLDER}/wiki-index.md`
     - (c) Skip the index layer (wiki-query will search directly instead)"
   - Capture the chosen path as `INDEX_PATH`, or empty string for (c).
 
@@ -193,13 +197,16 @@ The index is an optional content-oriented catalog the LLM maintains inside a use
 
 ### 8. Confirm & write artifacts
 
-Show the user a summary of the configuration. Ask: "Write this to `{vault}/_System/wiki-schema.md` and `~/.config/llm-wiki/vault`? [y/N]"
+Show the user a summary of the configuration. Ask: "Write this to `{vault}/{SYSTEM_FOLDER}/wiki-schema.md` and `~/.config/llm-wiki/vault`? [y/N]"
 
 On confirmation:
 
-1. **Write the vault path file** — `~/.config/llm-wiki/vault`:
+1. **Write the pointer file** — `~/.config/llm-wiki/vault`:
    - Create the `~/.config/llm-wiki/` directory if missing
-   - Write the absolute vault path as the sole line of the file (no trailing newline issues — use `printf "%s\n" "$VAULT_PATH"`)
+   - Line 1: the absolute vault path. Line 2: the vault-relative schema path `{SYSTEM_FOLDER}/wiki-schema.md` (this is how the bootstrap and hooks find the schema when the system folder isn't named `_System`):
+     ```bash
+     printf "%s\n%s\n" "$VAULT_PATH" "$SYSTEM_FOLDER/wiki-schema.md" > ~/.config/llm-wiki/vault
+     ```
 
 2. **Read the template** — `$SKILL_DIR/vault-files/wiki-schema.md.template`
 
@@ -221,13 +228,13 @@ On confirmation:
    - `{{QMD_AVAILABLE}}` → `"true"` or `"false"`
    - `{{PROJECT_MAPPING_DESCRIPTION}}` → chosen sub-structure description
 
-4. **Write the filled schema** to `{vault}/_System/wiki-schema.md`.
+4. **Write the filled schema** to `{vault}/{SYSTEM_FOLDER}/wiki-schema.md`.
 
-5. **Seed the vault** (first-time only):
-   - Create `{vault}/_System/Templates/` if missing
-   - Create `{vault}/_System/Archive/Sources/` if missing
-   - If `{vault}/_System/wiki-log.md` is missing, copy `$SKILL_DIR/vault-files/wiki-log.md` to it
-   - For each file in `$SKILL_DIR/vault-files/Templates/`, copy to `{vault}/_System/Templates/` only if not already present (never overwrite user content)
+5. **Seed the vault** (first-time only) — all paths use the mapped `{SYSTEM_FOLDER}`, never a hardcoded `_System`:
+   - Create `{vault}/{SYSTEM_FOLDER}/Templates/` if missing
+   - Create `{vault}/{SYSTEM_FOLDER}/Archive/Sources/` if missing
+   - If `{vault}/{SYSTEM_FOLDER}/wiki-log.md` is missing, copy `$SKILL_DIR/vault-files/wiki-log.md` to it
+   - For each file in `$SKILL_DIR/vault-files/Templates/`, copy to `{vault}/{SYSTEM_FOLDER}/Templates/` only if not already present (never overwrite user content). When copying, replace the literal `_System` in file contents with `{SYSTEM_FOLDER}` and the literal `claude-code` with the chosen `{WIKI_SOURCE}` so seeded templates match this vault's schema.
 
 6. **Seed the index note** (only if `INDEX_PATH` is non-empty):
    - If `{vault}/{INDEX_PATH}` **exists**: do NOT modify it. The managed block will be created lazily on the first `wiki-capture` or `wiki-ingest` call that needs to write entries.
@@ -255,7 +262,7 @@ On confirmation:
      _(none yet)_
      <!-- llm-wiki:index:end -->
      ```
-   - Create parent directories if the path includes them (e.g. `_System/wiki-index.md`).
+   - Create parent directories if the path includes them (e.g. `{SYSTEM_FOLDER}/wiki-index.md`).
 
 7. **Create any named role folders** that don't yet exist in the vault (ask before creating each one).
 
@@ -263,7 +270,7 @@ On confirmation:
    - Skip silently if `{VAULT_PATH}/AGENTS.md` already exists. Never overwrite.
    - Ask: `Scaffold a vault-root AGENTS.md for vault-specific LLM guidance? [y/N]` — default is no.
    - On accept: copy `$SKILL_DIR/vault-files/AGENTS.md.template` verbatim to `{VAULT_PATH}/AGENTS.md`. No template substitution — the file is freeform context the user fills in.
-     Codex/OpenCode/Pi read `AGENTS.md` natively; Claude/Gemini users who want vault-dir context can add a one-line `@AGENTS.md` `CLAUDE.md`/`GEMINI.md` themselves — mention this, don't auto-create it.
+     Antigravity/Codex/OpenCode/Pi read `AGENTS.md` natively; Claude (and legacy Gemini) users who want vault-dir context can add a one-line `@AGENTS.md` `CLAUDE.md`/`GEMINI.md` themselves — mention this, don't auto-create it.
 
 ### 9. Reconfigure diff (only if this is a reconfigure flow)
 
@@ -326,7 +333,7 @@ Use the actual vault path and CLI path in all examples, not placeholders.
 
 ### 11. Log it
 
-- Append an entry to `{vault}/_System/wiki-log.md`:
+- Append an entry to `{vault}/{SYSTEM_FOLDER}/wiki-log.md`:
 
 ```
 ## [YYYY-MM-DD] configure | initial setup
@@ -343,8 +350,8 @@ Use the actual vault path and CLI path in all examples, not placeholders.
 ```
 Configured successfully.
 Vault path: {VAULT_PATH}
-Schema: {vault}/_System/wiki-schema.md
-Vault path file: ~/.config/llm-wiki/vault
+Schema: {vault}/{SYSTEM_FOLDER}/wiki-schema.md
+Pointer file: ~/.config/llm-wiki/vault (vault path + schema path)
 
 Next:
 1. Add export OBSIDIAN_VAULT_PATH="{VAULT_PATH}" to your shell profile

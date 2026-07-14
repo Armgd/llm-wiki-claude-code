@@ -16,7 +16,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/wiki-inbox-nudge.sh",
+						"command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/wiki-inbox-nudge.sh --json",
 						"timeout": 10
 					}
 				]
@@ -27,7 +27,18 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/wiki-stop.sh",
+						"command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/wiki-stop.sh --json",
+						"timeout": 5
+					}
+				]
+			}
+		],
+		"SessionEnd": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/wiki-cleanup.sh",
 						"timeout": 5
 					}
 				]

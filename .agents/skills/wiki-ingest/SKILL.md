@@ -2,7 +2,7 @@
 name: wiki-ingest
 description: "Use this skill to ingest an external source (article, PDF, meeting notes) into an Obsidian-based LLM wiki. Triggers when the user runs the wiki-ingest skill (Claude: `/llm-wiki:wiki-ingest`), asks to \"ingest this article\", \"summarize and file this source\", or similar source-processing requests. Produces a source summary page cross-referenced with existing knowledge and moves the original to the vault's archive."
 argument-hint: "<path-to-source-note-relative-to-vault>"
-allowed-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__obsidian__search_notes, mcp__obsidian__read_note, mcp__obsidian__write_note, mcp__obsidian__patch_note, mcp__obsidian__update_frontmatter, mcp__obsidian__get_frontmatter, mcp__obsidian__list_directory, mcp__obsidian__move_note, mcp__obsidian__move_file
+allowed-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__obsidian__search_notes, mcp__obsidian__read_note, mcp__obsidian__write_note, mcp__obsidian__patch_note, mcp__obsidian__update_frontmatter, mcp__obsidian__get_frontmatter, mcp__obsidian__list_directory, mcp__obsidian__move_note, mcp__obsidian__move_file, mcp__plugin_llm-wiki_obsidian__search_notes, mcp__plugin_llm-wiki_obsidian__read_note, mcp__plugin_llm-wiki_obsidian__write_note, mcp__plugin_llm-wiki_obsidian__patch_note, mcp__plugin_llm-wiki_obsidian__update_frontmatter, mcp__plugin_llm-wiki_obsidian__get_frontmatter, mcp__plugin_llm-wiki_obsidian__list_directory, mcp__plugin_llm-wiki_obsidian__move_note, mcp__plugin_llm-wiki_obsidian__move_file
 ---
 
 # wiki-ingest skill (Claude: `/llm-wiki:wiki-ingest`)
@@ -13,7 +13,7 @@ Process an external source into a structured summary filed in the user's Obsidia
 
 **Resolve the skill directory first.** Set `SKILL_DIR` to the absolute path of this
 skill's directory. In Claude Code, use `${CLAUDE_SKILL_DIR}` (your host substitutes it).
-On Codex, Gemini, OpenCode, or Pi, substitute the absolute skill path your host reported
+On other hosts (Antigravity, Codex, OpenCode, Pi, ...), substitute the absolute skill path your host reported
 when it loaded this skill. A Bash step's working directory is the user's project, not the
 skill dir, so every bundled-file reference below uses `$SKILL_DIR` — never a bare relative path.
 Set SKILL_DIR at the start of every Bash step that sources the helper — Bash tool calls run in separate shells and do not share variables.
@@ -31,6 +31,7 @@ Path to the source note, relative to the vault root, e.g. `"00 - Inbox/The AI La
    **Probe I/O backend** — run via Bash:
    ```bash
    SKILL_DIR="${CLAUDE_SKILL_DIR}"   # Claude fills this; other hosts: set to the abs skill dir
+   VAULT_PATH="<vault path>"          # substitute the value resolved by the bootstrap
    source "$SKILL_DIR/scripts/wiki-io.sh"
    wiki_io_probe "${VAULT_PATH}"
    wiki_qmd_probe "${VAULT_PATH}"
@@ -38,8 +39,9 @@ Path to the source note, relative to the vault root, e.g. `"00 - Inbox/The AI La
    ```
    - If `WIKI_IO_BACKEND` is `"cli"` → use CLI for all read/search/write operations. Consult `$SKILL_DIR/references/cli-patterns.md` for syntax.
    - If `WIKI_IO_BACKEND` is `"mcp"` → if this agent exposes Obsidian MCP tools
-     (Claude/Gemini/OpenCode name them `mcp__obsidian__*`; other agents may not have
-     them at all), probe `mcp__obsidian__list_directory` on the vault root and use MCP
+     (standalone servers expose `mcp__obsidian__*`; the Claude Code plugin-bundled
+     server exposes `mcp__plugin_llm-wiki_obsidian__*`; other agents may not have
+     them at all), probe the `list_directory` tool on the vault root and use MCP
      if it responds. Otherwise use file tools (Read/Write/Edit/Grep/Glob). Agents
      without MCP (e.g. Pi) always land on the CLI or file-tool tier — this is expected.
    - Commit to one I/O tier for the entire workflow. qmd availability is independent of the I/O tier.
@@ -97,7 +99,7 @@ Path to the source note, relative to the vault root, e.g. `"00 - Inbox/The AI La
      - The wiki log entry
 
 9. **Archive the source**:
-   - **Before moving**, verify the destination `{paths.archive_sources}` is not itself inside `folders.protected` (see §Protected paths in `references/setup.md`). If it is, abort with the documented message rather than attempting the move.
+   - This move is the one write that `folders.protected` never blocks — `{paths.archive_sources}` exists to receive archived sources, and it is a default protection candidate (see §Protected paths → Archive exemption in `references/setup.md`). The exemption is narrow: never overwrite or edit an existing archived file (on filename collision, suffix the incoming file, e.g. `name (2).md`), and write nothing there other than the source being archived.
    - Create the archive directory if it doesn't yet exist
    - **CLI**: use `obsidian eval` to move (preserves backlinks):
      ```bash

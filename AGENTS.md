@@ -57,6 +57,6 @@ These are Agent Skills, auto-discovered from `.agents/skills/`. Any agent runtim
 ## Per-agent notes
 
 - **Claude Code** reads this file via `CLAUDE.md` (`@AGENTS.md` import).
-- **Gemini CLI** reads this file via `GEMINI.md` (`@AGENTS.md` import).
-- **Codex, OpenCode, Pi** read `AGENTS.md` natively — no shim needed.
+- **Antigravity CLI, Codex, OpenCode, Pi** read `AGENTS.md` natively — no shim needed.
+- **Gemini CLI** (deprecated, superseded by Antigravity CLI): no `GEMINI.md` shim is shipped anymore — enterprise holdouts can set `context.fileName` to `AGENTS.md` or add their own one-line `@AGENTS.md` shim (see `wiring/SETUP-gemini.md`).
 - MCP server and hook wiring per agent live under `wiring/` — see that directory for setup instructions.

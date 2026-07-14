@@ -1,23 +1,42 @@
 #!/bin/bash
-# wiki-stop.sh — Stop hook
-# Reminds Claude to capture session knowledge before ending, and cleans up
-# this session's /tmp state. Silent when llm-wiki isn't configured.
+# wiki-stop.sh — Stop hook (fires every time the agent finishes a turn,
+# NOT once per session). Emits a once-per-session reminder to run
+# wiki-capture when the session has tracked file changes.
+#
+# /tmp state cleanup lives in wiki-cleanup.sh (SessionEnd) — never here,
+# otherwise the change manifest would be wiped after every turn and
+# wiki-capture would only ever see the last turn's writes.
+#
+# Output modes:
+#   --json  Claude Code hook JSON ({"systemMessage": ...}) — plain stdout
+#           from a Stop hook is only shown in transcript mode, so JSON is
+#           required for the reminder to actually surface.
+#   (none)  plain text — OpenCode/Pi adapters surface stdout themselves.
 
 [ -f "$HOME/.config/llm-wiki/vault" ] || exit 0
+
+format="text"
+[ "${1:-}" = "--json" ] && format="json"
 
 input=$(cat 2>/dev/null || echo '{}')
 session_id=$(echo "$input" | jq -r '.session_id // empty' 2>/dev/null)
 [ -z "$session_id" ] && session_id="pid-$PPID"
 
 manifest="/tmp/wiki-session-changes.${session_id}"
-nudge_flag="/tmp/wiki-inbox-nudged.${session_id}"
+flag="/tmp/wiki-stop-reminded.${session_id}"
 
-if [ -f "$manifest" ]; then
-  count=$(wc -l < "$manifest" | tr -d ' ')
-  echo "[wiki] Session ending. $count file changes tracked. Review session for wiki-worthy knowledge — run the wiki-capture skill if noteworthy work was done."
-  rm -f "$manifest"
+# Only remind when this session actually tracked changes, and only once.
+[ -s "$manifest" ] || exit 0
+[ -f "$flag" ] && exit 0
+touch "$flag"
+
+count=$(wc -l < "$manifest" | tr -d ' ')
+msg="[wiki] $count file change(s) tracked this session. Run the wiki-capture skill (Claude: /llm-wiki:wiki-capture) before wrapping up if noteworthy work was done."
+
+if [ "$format" = "json" ]; then
+  if command -v jq >/dev/null 2>&1; then
+    printf '{"systemMessage": %s}\n' "$(printf '%s' "$msg" | jq -Rs .)"
+  fi
 else
-  echo "[wiki] Session ending. Run the wiki-capture skill if this session produced noteworthy decisions, findings, or patterns."
+  echo "$msg"
 fi
-
-rm -f "$nudge_flag"

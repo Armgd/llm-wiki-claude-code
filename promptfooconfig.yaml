@@ -1,62 +1,52 @@
 description: "Plugin eval: llm-wiki"
 prompts:
-  - file://../../eval/lib/prompt-template-local.json
+  - file://eval/lib/prompt-template-local.json
 providers:
   - id: anthropic:claude-agent-sdk
     label: claude-skill-eval
     config:
       model: claude-sonnet-4-6
       skills:
-        - ./skills/wiki-capture/
-        - ./skills/wiki-configure/
-        - ./skills/wiki-ingest/
-        - ./skills/wiki-lint/
-        - ./skills/wiki-query/
+        - ./.agents/skills/wiki-capture/
+        - ./.agents/skills/wiki-configure/
+        - ./.agents/skills/wiki-ingest/
+        - ./.agents/skills/wiki-lint/
+        - ./.agents/skills/wiki-query/
       allowedTools:
         - Read
         - Glob
         - Grep
       systemPrompt: preset:claude_code
-      apiKeyRequired: false
+defaultTest:
+  options:
+    provider: anthropic:messages:claude-sonnet-4-6
 tests:
   - description: "[llm-wiki] Clean trigger — wiki-capture activates for end-of-session knowledge capture"
     vars:
       query: We just finished debugging that cache-invalidation issue. Capture this session into my wiki before we wrap up.
     assert:
+      - type: icontains
+        value: wiki-capture
+        metric: criterion/references-wiki-capture
       - type: icontains-any
         value:
-          - references
-          - wiki-capture
-          - skill
-          - llm-wiki
-          - wiki-capture
-          - command
-        metric: criterion/References the wiki-capture skill or /ll...
-      - type: icontains-any
-        value:
-          - reading
-          - .config
-          - llm-wiki
-          - vault
-          - running
+          - llm-wiki/vault
           - wiki-configure
-        metric: criterion/Mentions reading ~/.config/llm-wiki/vaul...
+        metric: criterion/resolves-vault-config-or-points-to-configure
+      - type: icontains
+        value: session log
+        metric: criterion/plans-session-log
       - type: icontains-any
         value:
-          - plans
-          - write
-          - session
-          - log
-          - decisions
-          - findings
-        metric: criterion/Plans to write a session log with Decisi...
+          - Decisions
+          - Findings
+          - Next Steps
+        metric: criterion/session-log-sections
       - type: icontains-any
         value:
+          - "[["
           - wikilink
-          - syntax
-          - ...
-          - citations
-        metric: criterion/Uses wikilink syntax [[...]] for citatio...
+        metric: criterion/wikilink-citations
     metadata:
       plugin: llm-wiki
       scenario: activation-capture
@@ -67,38 +57,21 @@ tests:
     vars:
       query: I just installed the llm-wiki plugin. Set it up for my vault at ~/Documents/ObsidianVault.
     assert:
-      - type: icontains-any
+      - type: icontains
+        value: wiki-configure
+        metric: criterion/references-wiki-configure
+      - type: icontains-all
         value:
-          - references
-          - wiki-configure
-          - skill
-          - llm-wiki
-          - wiki-configure
-          - command
-        metric: criterion/References the wiki-configure skill or /...
-      - type: icontains-any
-        value:
-          - mapping
-          - folders
-          - required
-          - roles
           - inbox
           - projects
-        metric: criterion/Mentions mapping folders to required rol...
-      - type: icontains-any
-        value:
-          - writing
-          - schema
-          - _system
-          - wiki-schema.md
-        metric: criterion/Mentions writing the schema to _System/w...
-      - type: icontains-any
-        value:
-          - setting
-          - obsidian_vault_path
-          - environment
-          - variable
-        metric: criterion/Mentions setting OBSIDIAN_VAULT_PATH as ...
+          - resources
+        metric: criterion/maps-required-folder-roles
+      - type: icontains
+        value: wiki-schema.md
+        metric: criterion/writes-schema
+      - type: icontains
+        value: OBSIDIAN_VAULT_PATH
+        metric: criterion/mentions-obsidian-vault-path-env
     metadata:
       plugin: llm-wiki
       scenario: activation-configure
@@ -109,42 +82,28 @@ tests:
     vars:
       query: "Ingest this article into my wiki: \"00 - Inbox/The AI Layoff Trap.md\""
     assert:
+      - type: icontains
+        value: wiki-ingest
+        metric: criterion/references-wiki-ingest
       - type: icontains-any
         value:
-          - references
-          - wiki-ingest
-          - skill
-          - llm-wiki
-          - wiki-ingest
-          - command
-        metric: criterion/References the wiki-ingest skill or /llm...
-      - type: icontains-any
-        value:
-          - plans
-          - create
+          - source summary
           - source-summary
-          - key
-          - claims
-          - relevance
-        metric: criterion/Plans to create a source-summary with Ke...
+        metric: criterion/plans-source-summary
       - type: icontains-any
         value:
-          - plans
-          - archive
-          - original
-          - source
-          - file
-          - summarization
-        metric: criterion/Plans to archive the original source fil...
+          - Key Claims
+          - Relevance
+          - Contradictions
+        metric: criterion/source-summary-sections
+      - type: icontains
+        value: archiv
+        metric: criterion/archives-original
       - type: icontains-any
         value:
           - move_note
-          - flagging
-          - backlinks
-          - when
-          - falling
-          - back
-        metric: criterion/Mentions move_note or flagging backlinks...
+          - backlink
+        metric: criterion/backlink-safe-move
     metadata:
       plugin: llm-wiki
       scenario: activation-ingest
@@ -155,33 +114,28 @@ tests:
     vars:
       query: Run a health check on my wiki — I want to know about orphans, broken links, and stale TODOs.
     assert:
+      - type: icontains
+        value: wiki-lint
+        metric: criterion/references-wiki-lint
+      - type: icontains
+        value: orphan
+        metric: criterion/checks-orphans
       - type: icontains-any
         value:
-          - references
-          - wiki-lint
-          - skill
-          - llm-wiki
-          - wiki-lint
-          - command
-        metric: criterion/References the wiki-lint skill or /llm-w...
+          - broken link
+          - broken wikilink
+          - unresolved
+        metric: criterion/checks-broken-links
       - type: icontains-any
         value:
-          - plans
-          - check
-          - orphans
-          - broken
-          - links
           - stale
-        metric: criterion/Plans to check orphans, broken links, st...
+          - TODO
+        metric: criterion/checks-stale-todos
       - type: icontains-any
         value:
-          - producing
-          - wiki
-          - health
-          - report
-          - counts
-          - page
-        metric: criterion/Mentions producing a Wiki Health Report ...
+          - health report
+          - Wiki Health
+        metric: criterion/produces-health-report
     metadata:
       plugin: llm-wiki
       scenario: activation-lint
@@ -194,38 +148,24 @@ tests:
     assert:
       - type: icontains
         value: python
-        metric: keyword/python
+        metric: criterion/answers-the-python-task
       - type: icontains
         value: csv
-        metric: keyword/csv
-      - type: icontains
-        value: pandas
-        metric: keyword/pandas
-      - type: icontains-any
+        metric: criterion/handles-csv
+      - type: not-icontains-any
         value:
-          - reads
-          - csv
-          - file
-          - sorts
-          - revenue
-          - column
-        metric: criterion/Reads CSV file and sorts by revenue colu...
-      - type: icontains-any
-        value:
-          - mention
           - wiki-capture
           - wiki-ingest
           - wiki-query
           - wiki-lint
           - wiki-configure
-        metric: criterion/Does not mention wiki-capture or wiki-in...
-      - type: icontains-any
+        metric: criterion/no-wiki-skill-mentioned
+      - type: not-icontains-any
         value:
-          - mention
-          - obsidian_vault_path
-          - _system
-          - wiki-schema.md
-        metric: criterion/Does not mention OBSIDIAN_VAULT_PATH or ...
+          - OBSIDIAN_VAULT_PATH
+          - wiki-schema
+          - llm-wiki
+        metric: criterion/no-wiki-config-mentioned
     metadata:
       plugin: llm-wiki
       scenario: activation-negative-non-wiki
@@ -236,39 +176,28 @@ tests:
     vars:
       query: What does my wiki say about container networking approaches?
     assert:
-      - type: icontains-any
-        value:
-          - references
-          - wiki-query
-          - skill
-          - llm-wiki
-          - wiki-query
-          - command
-        metric: criterion/References the wiki-query skill or /llm-...
-      - type: icontains-any
-        value:
-          - plans
-          - search
-          - vault
-          - container
-          - networking
-          - via
-        metric: criterion/Plans to search the vault for 'container...
       - type: icontains
-        value: wikilinks
-        metric: keyword/wikilinks
+        value: wiki-query
+        metric: criterion/references-wiki-query
       - type: icontains
-        value: citations
-        metric: keyword/citations
+        value: container networking
+        metric: criterion/searches-the-topic
       - type: icontains-any
         value:
-          - offering
-          - file
-          - answer
-          - knowledge
-          - page
-          - substantial
-        metric: criterion/Mentions offering to file the answer as ...
+          - "[["
+          - wikilink
+        metric: criterion/wikilink-citations
+      - type: icontains-any
+        value:
+          - citation
+          - cite
+        metric: criterion/mentions-citations
+      - type: icontains-any
+        value:
+          - knowledge page
+          - file it
+          - file the answer
+        metric: criterion/offers-to-file-answer
     metadata:
       plugin: llm-wiki
       scenario: activation-query
@@ -281,32 +210,16 @@ tests:
     assert:
       - type: llm-rubric
         value: Does NOT use Write in a way that replaces the existing session-log-2026-04-15.md wholesale
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Does NOT use Write in a way that replace...
+        metric: judge/no-wholesale-overwrite
       - type: llm-rubric
         value: Plan explicitly checks whether the target file exists before writing
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Plan explicitly checks whether the targe...
+        metric: judge/existence-check-before-write
       - type: llm-rubric
         value: "Chooses one of: append, suffix, or ask the user — and justifies the choice"
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: "judge/Chooses one of: append, suffix, or ask t..."
+        metric: judge/append-suffix-or-ask
       - type: llm-rubric
         value: Earlier capture's content is preserved in the final state
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Earlier capture's content is preserved i...
+        metric: judge/earlier-content-preserved
     metadata:
       plugin: llm-wiki
       scenario: antipattern-capture-overwrite-existing-log
@@ -319,25 +232,13 @@ tests:
     assert:
       - type: llm-rubric
         value: Output includes at least one [[wikilink]] citation inline
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Output includes at least one [[wikilink]...
+        metric: judge/wikilink-present
       - type: llm-rubric
         value: Does NOT produce a citation-free prose answer, even when the user asks for one
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Does NOT produce a citation-free prose a...
+        metric: judge/refuses-citation-free-answer
       - type: llm-rubric
         value: Briefly explains that wiki-query always cites, so the user can trace claims back to the vault
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Briefly explains that wiki-query always ...
+        metric: judge/explains-citation-policy
     metadata:
       plugin: llm-wiki
       scenario: antipattern-query-missing-citations
@@ -348,33 +249,18 @@ tests:
     vars:
       query: Capture this session to my wiki. (Assume ~/.config/llm-wiki/vault does not exist and the vault has never been configured.)
     assert:
-      - type: icontains-any
-        value:
-          - contains
-          - message
-          - llm-wiki
-          - vault
-          - configured
-          - instructs
-        metric: criterion/Output contains the message 'llm-wiki va...
       - type: icontains
-        value: write
-        metric: keyword/write
+        value: not configured
+        metric: criterion/emits-abort-message
       - type: icontains
-        value: files
-        metric: keyword/files
-      - type: icontains
-        value: turn
-        metric: keyword/turn
-      - type: icontains-any
-        value:
-          - guess
-          - default
-          - vault
-          - path
-          - like
-          - documents
-        metric: criterion/Does not guess a default vault path like...
+        value: wiki-configure
+        metric: criterion/points-to-configure
+      - type: llm-rubric
+        value: Does not write or create any files in this turn — aborts before any write tool call
+        metric: judge/no-writes-before-abort
+      - type: not-icontains
+        value: ~/Documents
+        metric: criterion/no-guessed-default-vault-path
     metadata:
       plugin: llm-wiki
       scenario: critical-bootstrap-abort-unconfigured
@@ -387,32 +273,16 @@ tests:
     assert:
       - type: llm-rubric
         value: Enrichment block is appended after a --- separator, not inline in existing sections
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Enrichment block is appended after a ---...
+        metric: judge/appended-after-separator
       - type: llm-rubric
         value: Callout uses the > [!claude] Added YYYY-MM-DD format from the schema
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Callout uses the > [!claude] Added YYYY-...
+        metric: judge/callout-format
       - type: llm-rubric
         value: Original user-authored content is preserved verbatim
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Original user-authored content is preser...
+        metric: judge/original-preserved
       - type: llm-rubric
         value: Frontmatter gains wiki-updated and wiki-updated-by fields attributing the source
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Frontmatter gains wiki-updated and wiki-...
+        metric: judge/frontmatter-attribution
     metadata:
       plugin: llm-wiki
       scenario: critical-capture-enrichment-append
@@ -425,32 +295,16 @@ tests:
     assert:
       - type: llm-rubric
         value: Output mentions using file tools as fallback
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Output mentions using file tools as fall...
+        metric: judge/mentions-filetool-fallback
       - type: llm-rubric
         value: The query uses Grep or Glob to search the vault
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/The query uses Grep or Glob to search th...
+        metric: judge/uses-grep-or-glob
       - type: llm-rubric
         value: The query uses Read to read matching notes
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/The query uses Read to read matching not...
+        metric: judge/uses-read
       - type: llm-rubric
         value: A synthesized answer is still produced
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/A synthesized answer is still produced
+        metric: judge/answer-produced
     metadata:
       plugin: llm-wiki
       scenario: critical-cli-fallback-to-filetool
@@ -463,25 +317,13 @@ tests:
     assert:
       - type: llm-rubric
         value: Output mentions using MCP or file tools as fallback
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Output mentions using MCP or file tools ...
+        metric: judge/mentions-mcp-or-filetool-fallback
       - type: llm-rubric
         value: No Bash calls containing 'obsidian read' or 'obsidian search' appear
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/No Bash calls containing 'obsidian read'...
+        metric: judge/no-cli-calls
       - type: llm-rubric
         value: The query still produces a synthesized answer
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/The query still produces a synthesized a...
+        metric: judge/answer-produced
     metadata:
       plugin: llm-wiki
       scenario: critical-cli-fallback-to-mcp
@@ -494,32 +336,16 @@ tests:
     assert:
       - type: llm-rubric
         value: "Home.md is detected via frontmatter type: index"
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Home.md is detected via frontmatter type...
+        metric: judge/index-detected
       - type: llm-rubric
         value: User is prompted to confirm before paths.index is set
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/User is prompted to confirm before paths...
+        metric: judge/confirmation-before-set
       - type: llm-rubric
         value: Home.md file content is not modified by wiki-configure when an existing index note is detected
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Home.md file content is not modified by ...
+        metric: judge/index-note-untouched
       - type: llm-rubric
-        value: paths.index is written into {vault}/_System/wiki-schema.md after confirmation
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/paths.index is written into {vault}/_Sys...
+        value: paths.index is written into the vault's wiki-schema.md after confirmation
+        metric: judge/paths-index-written
     metadata:
       plugin: llm-wiki
       scenario: critical-configure-detects-existing-index
@@ -532,39 +358,19 @@ tests:
     assert:
       - type: llm-rubric
         value: Flow detects this is a reconfigure (not first-time)
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Flow detects this is a reconfigure (not ...
+        metric: judge/reconfigure-detected
       - type: llm-rubric
         value: Presents a diff of the schema changes before writing
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Presents a diff of the schema changes be...
+        metric: judge/diff-before-write
       - type: llm-rubric
         value: Explicitly skips overwriting existing Templates/Session Log.md
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Explicitly skips overwriting existing Te...
+        metric: judge/templates-preserved
       - type: llm-rubric
         value: Explicitly skips overwriting existing _System/wiki-log.md
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Explicitly skips overwriting existing _S...
+        metric: judge/wiki-log-preserved
       - type: llm-rubric
         value: Requires user confirmation before applying changes
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Requires user confirmation before applyi...
+        metric: judge/confirmation-required
     metadata:
       plugin: llm-wiki
       scenario: critical-configure-no-overwrite
@@ -577,32 +383,16 @@ tests:
     assert:
       - type: llm-rubric
         value: The stored vault_path in the schema matches the user's input exactly, preserving the lowercase 'o' in 'obsidianVault'
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/The stored vault_path in the schema matc...
+        metric: judge/schema-casing-verbatim
       - type: llm-rubric
         value: ~/.config/llm-wiki/vault content matches the user's exact casing
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/~/.config/llm-wiki/vault content matches...
+        metric: judge/pointer-file-casing-verbatim
       - type: llm-rubric
         value: The wiki log entry does NOT contain the string 'fixed vault_path case' or any claim that the casing was corrected
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/The wiki log entry does NOT contain the ...
+        metric: judge/no-casing-correction-claim
       - type: llm-rubric
         value: If a default path is suggested anywhere, it uses case-neutral phrasing rather than 'ObsidianVault' with capital O
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/If a default path is suggested anywhere,...
+        metric: judge/case-neutral-suggestions
     metadata:
       plugin: llm-wiki
       scenario: critical-configure-preserve-casing
@@ -615,39 +405,19 @@ tests:
     assert:
       - type: llm-rubric
         value: Home.md content outside the <!-- llm-wiki:index:start --> / <!-- llm-wiki:index:end --> markers is byte-identical to its pre-run state
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Home.md content outside the <!-- llm-wik...
+        metric: judge/outside-markers-untouched
       - type: llm-rubric
         value: Dataview code blocks (```dataview ... ```) are untouched
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Dataview code blocks (```dataview ... ``...
+        metric: judge/dataview-untouched
       - type: llm-rubric
         value: The Navigation section and its [[MOC - ...]] links are untouched
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/The Navigation section and its [[MOC - ....
+        metric: judge/navigation-untouched
       - type: llm-rubric
         value: No session-log entries appear in the managed block
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/No session-log entries appear in the man...
+        metric: judge/no-session-logs-in-index
       - type: llm-rubric
         value: Managed block groups entries by type then domain as specified in the schema
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Managed block groups entries by type the...
+        metric: judge/grouping-per-schema
     metadata:
       plugin: llm-wiki
       scenario: critical-index-managed-block-preserves-user-content
@@ -660,32 +430,16 @@ tests:
     assert:
       - type: llm-rubric
         value: Plan archives the original to _System/Archive/Sources/ (or whatever paths.archive_sources resolves to)
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Plan archives the original to _System/Ar...
+        metric: judge/archives-to-archive-sources
       - type: llm-rubric
-        value: Uses mcp__obsidian__move_note when MCP is available, explicitly for backlink preservation
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Uses mcp__obsidian__move_note when MCP i...
+        value: Uses the Obsidian MCP move_note tool when MCP is available, explicitly for backlink preservation
+        metric: judge/mcp-move-note-for-backlinks
       - type: llm-rubric
         value: On the mv fallback, the plan rewrites inbound wikilinks to the new location (not just renames the file)
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/On the mv fallback, the plan rewrites in...
+        metric: judge/mv-fallback-rewrites-links
       - type: llm-rubric
         value: Wiki log entry records the archive location and any backlinks that needed rewriting
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Wiki log entry records the archive locat...
+        metric: judge/wiki-log-records-archive
     metadata:
       plugin: llm-wiki
       scenario: critical-ingest-archive-and-preserve-links
@@ -698,32 +452,16 @@ tests:
     assert:
       - type: llm-rubric
         value: Plan adds cross-references and MOC links for orphans
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Plan adds cross-references and MOC links...
+        metric: judge/orphan-repairs
       - type: llm-rubric
         value: Explicitly refuses to auto-create pages for broken wikilinks — reports them for user review instead
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Explicitly refuses to auto-create pages ...
+        metric: judge/no-auto-created-pages
       - type: llm-rubric
         value: Does not edit pages that lack a wiki-source frontmatter field
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Does not edit pages that lack a wiki-sou...
+        metric: judge/user-pages-untouched
       - type: llm-rubric
         value: Wiki log entry distinguishes 'repaired' from 'reported'
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Wiki log entry distinguishes 'repaired' ...
+        metric: judge/repaired-vs-reported
     metadata:
       plugin: llm-wiki
       scenario: critical-lint-fix-safety
@@ -736,32 +474,16 @@ tests:
     assert:
       - type: llm-rubric
         value: Skill emits an abort message that names the protected path and mentions `folders.protected`
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Skill emits an abort message that names ...
+        metric: judge/abort-message
       - type: llm-rubric
         value: Skill explicitly does not write into `_System/Templates/`
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Skill explicitly does not write into `_S...
+        metric: judge/no-protected-write
       - type: llm-rubric
         value: Skill points the user to /llm-wiki:wiki-configure as the remediation
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Skill points the user to /llm-wiki:wiki-...
+        metric: judge/points-to-configure
       - type: llm-rubric
         value: Skill does not silently retarget the write to a different folder without telling the user
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Skill does not silently retarget the wri...
+        metric: judge/no-silent-retarget
     metadata:
       plugin: llm-wiki
       scenario: critical-protected-folder-refused
@@ -774,32 +496,16 @@ tests:
     assert:
       - type: llm-rubric
         value: Skill reads the index file before issuing keyword-search calls
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Skill reads the index file before issuin...
+        metric: judge/index-read-first
       - type: llm-rubric
         value: Priority candidates from the index are merged with (not replaced by) keyword search results
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Priority candidates from the index are m...
+        metric: judge/index-merged-with-search
       - type: llm-rubric
         value: Skill does NOT regenerate the index during a query (read-only)
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Skill does NOT regenerate the index duri...
+        metric: judge/query-read-only
       - type: llm-rubric
         value: Final answer uses [[wikilinks]] to the underlying pages
-        provider:
-          id: anthropic:messages:claude-sonnet-4-6
-          config:
-            apiKeyRequired: false
-        metric: judge/Final answer uses [[wikilinks]] to the u...
+        metric: judge/wikilink-citations
     metadata:
       plugin: llm-wiki
       scenario: critical-query-reads-index-first

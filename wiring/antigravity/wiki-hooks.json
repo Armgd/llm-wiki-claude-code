@@ -1,0 +1,43 @@
+{
+  "llm-wiki-notify": {
+    "PostToolUse": [
+      {
+        "matcher": "write_to_file|replace_file_content|multi_replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /ABS/PATH/TO/llm-wiki/wiring/antigravity/wiki-hook-adapter.sh notify",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  },
+  "llm-wiki-inbox-nudge": {
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /ABS/PATH/TO/llm-wiki/wiring/antigravity/wiki-hook-adapter.sh nudge",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
+  "llm-wiki-stop": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /ABS/PATH/TO/llm-wiki/wiring/antigravity/wiki-hook-adapter.sh stop",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

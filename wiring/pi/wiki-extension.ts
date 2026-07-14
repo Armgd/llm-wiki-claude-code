@@ -24,7 +24,9 @@ export default function (pi: any) {
     if (nudge) ctx.ui.notify(nudge, "info");
   });
   pi.on("session_shutdown", async (_event: any, ctx: any) => {
-    const msg = await run("wiki-stop.sh", { session_id: ctx.sessionManager.getSessionId() });
+    const session_id = ctx.sessionManager.getSessionId();
+    const msg = await run("wiki-stop.sh", { session_id });
     if (msg) ctx.ui.notify(msg, "info");
+    await run("wiki-cleanup.sh", { session_id });
   });
 }

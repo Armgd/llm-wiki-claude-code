@@ -2,7 +2,7 @@
 name: wiki-capture
 description: "Use this skill to capture session knowledge into an Obsidian-based LLM wiki. Triggers when the user runs the wiki-capture skill (Claude: `/llm-wiki:wiki-capture`), asks to \"capture this session\", \"file this session into the wiki\", or similar end-of-session knowledge persistence requests. Produces a session log in the vault plus optional knowledge page creation and enrichments."
 argument-hint: "[project-name]"
-allowed-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__obsidian__search_notes, mcp__obsidian__read_note, mcp__obsidian__read_multiple_notes, mcp__obsidian__write_note, mcp__obsidian__patch_note, mcp__obsidian__update_frontmatter, mcp__obsidian__get_frontmatter, mcp__obsidian__list_directory, mcp__obsidian__get_notes_info
+allowed-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__obsidian__search_notes, mcp__obsidian__read_note, mcp__obsidian__read_multiple_notes, mcp__obsidian__write_note, mcp__obsidian__patch_note, mcp__obsidian__update_frontmatter, mcp__obsidian__get_frontmatter, mcp__obsidian__list_directory, mcp__obsidian__get_notes_info, mcp__plugin_llm-wiki_obsidian__search_notes, mcp__plugin_llm-wiki_obsidian__read_note, mcp__plugin_llm-wiki_obsidian__read_multiple_notes, mcp__plugin_llm-wiki_obsidian__write_note, mcp__plugin_llm-wiki_obsidian__patch_note, mcp__plugin_llm-wiki_obsidian__update_frontmatter, mcp__plugin_llm-wiki_obsidian__get_frontmatter, mcp__plugin_llm-wiki_obsidian__list_directory, mcp__plugin_llm-wiki_obsidian__get_notes_info
 ---
 
 # wiki-capture skill (Claude: `/llm-wiki:wiki-capture`)
@@ -13,7 +13,7 @@ Extract and file knowledge from the current session into the user's Obsidian vau
 
 **Resolve the skill directory first.** Set `SKILL_DIR` to the absolute path of this
 skill's directory. In Claude Code, use `${CLAUDE_SKILL_DIR}` (your host substitutes it).
-On Codex, Gemini, OpenCode, or Pi, substitute the absolute skill path your host reported
+On other hosts (Antigravity, Codex, OpenCode, Pi, ...), substitute the absolute skill path your host reported
 when it loaded this skill. A Bash step's working directory is the user's project, not the
 skill dir, so every bundled-file reference below uses `$SKILL_DIR` — never a bare relative path.
 Set SKILL_DIR at the start of every Bash step that sources the helper — Bash tool calls run in separate shells and do not share variables.
@@ -31,6 +31,7 @@ Optional project name, e.g. `my-awesome-project` (Claude: `/llm-wiki:wiki-captur
    **Probe I/O backend** — run via Bash:
    ```bash
    SKILL_DIR="${CLAUDE_SKILL_DIR}"   # Claude fills this; other hosts: set to the abs skill dir
+   VAULT_PATH="<vault path>"          # substitute the value resolved by the bootstrap
    source "$SKILL_DIR/scripts/wiki-io.sh"
    wiki_io_probe "${VAULT_PATH}"
    wiki_qmd_probe "${VAULT_PATH}"
@@ -38,14 +39,15 @@ Optional project name, e.g. `my-awesome-project` (Claude: `/llm-wiki:wiki-captur
    ```
    - If `WIKI_IO_BACKEND` is `"cli"` → use CLI for all read/search/write operations. Consult `$SKILL_DIR/references/cli-patterns.md` for syntax.
    - If `WIKI_IO_BACKEND` is `"mcp"` → if this agent exposes Obsidian MCP tools
-     (Claude/Gemini/OpenCode name them `mcp__obsidian__*`; other agents may not have
-     them at all), probe `mcp__obsidian__list_directory` on the vault root and use MCP
+     (standalone servers expose `mcp__obsidian__*`; the Claude Code plugin-bundled
+     server exposes `mcp__plugin_llm-wiki_obsidian__*`; other agents may not have
+     them at all), probe the `list_directory` tool on the vault root and use MCP
      if it responds. Otherwise use file tools (Read/Write/Edit/Grep/Glob). Agents
      without MCP (e.g. Pi) always land on the CLI or file-tool tier — this is expected.
    - Commit to one I/O tier for the entire workflow. qmd availability is independent of the I/O tier.
 
 2. **Gather session context**:
-   - Look for the session change manifest at `/tmp/wiki-session-changes.*` — pick the newest (`ls -t /tmp/wiki-session-changes.* 2>/dev/null | head -1`). The notify hook writes per-session manifests; if none exist, skip this step.
+   - Look for the session change manifest written by the notify hook. If the host exposes this session's id as an env var (Claude Code: `$CLAUDE_SESSION_ID`), use `/tmp/wiki-session-changes.$CLAUDE_SESSION_ID`. Otherwise pick the newest (`ls -t /tmp/wiki-session-changes.* 2>/dev/null | head -1`); if several manifests exist, mention in the final report that concurrent sessions may have interleaved. If none exist, skip this step.
    - Review the conversation for: decisions made, bugs found + fixes, patterns discovered, current state of work, blockers, next steps
 
 3. **Search for related wiki content**:
@@ -80,6 +82,7 @@ Optional project name, e.g. `my-awesome-project` (Claude: `/llm-wiki:wiki-captur
    - **CLI**: `obsidian create path="<resolved-path>" content="<full-content>" silent` via Bash
    - **MCP**: `mcp__obsidian__write_note`
    - **File tools**: `Write {VAULT_PATH}/<path>`
+   - Once the session log is written, clear the manifest read in step 2 (`: > <manifest>`) so a second capture in this session doesn't re-report the same changes.
 
 6. **Create/update knowledge pages** (for significant findings):
    - **Before writing each page**, verify the target path is not inside `folders.protected` (see §Protected paths in `references/setup.md`). If it is, abort with the documented message.

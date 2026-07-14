@@ -66,6 +66,9 @@ obsidian search query="domain: AI" limit=10
 # Create a note with inline content (silent suppresses confirmation)
 obsidian create name="My Page" content="# Title\n\nBody" silent
 
+# Create at an exact vault-relative path (what the skills use)
+obsidian create path="03 - Resources/AI/My Page.md" content="# Title\n\nBody" silent
+
 # Create from a template
 obsidian create name="Session Log" template="session-log" silent
 

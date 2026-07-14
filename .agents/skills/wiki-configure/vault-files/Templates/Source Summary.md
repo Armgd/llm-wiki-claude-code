@@ -16,4 +16,4 @@ wiki-source: claude-code
 ## Contradictions
 
 ## Original
-[[_System/Archive/Sources/{{title}}|Original source]]
+[[_System/Archive/Sources/{{title}}|Original]]

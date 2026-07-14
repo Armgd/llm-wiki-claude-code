@@ -2,7 +2,7 @@
 name: wiki-query
 description: "Use this skill to query an Obsidian-based LLM wiki with a natural-language question and get a synthesized answer with wikilink citations. Triggers when the user runs the wiki-query skill (Claude: `/llm-wiki:wiki-query`), asks \"what does the wiki say about X\", \"search my wiki for Y\", or similar knowledge-lookup requests. Optionally offers to file substantial answers back into the wiki as knowledge pages."
 argument-hint: "<natural-language-question>"
-allowed-tools: Read, Grep, Glob, Bash, Write, mcp__obsidian__search_notes, mcp__obsidian__read_note, mcp__obsidian__read_multiple_notes, mcp__obsidian__get_notes_info, mcp__obsidian__write_note, mcp__obsidian__list_directory
+allowed-tools: Read, Grep, Glob, Bash, Write, mcp__obsidian__search_notes, mcp__obsidian__read_note, mcp__obsidian__read_multiple_notes, mcp__obsidian__get_notes_info, mcp__obsidian__write_note, mcp__obsidian__list_directory, mcp__plugin_llm-wiki_obsidian__search_notes, mcp__plugin_llm-wiki_obsidian__read_note, mcp__plugin_llm-wiki_obsidian__read_multiple_notes, mcp__plugin_llm-wiki_obsidian__get_notes_info, mcp__plugin_llm-wiki_obsidian__write_note, mcp__plugin_llm-wiki_obsidian__list_directory
 ---
 
 # wiki-query skill (Claude: `/llm-wiki:wiki-query`)
@@ -13,7 +13,7 @@ Search the user's Obsidian wiki and synthesize an answer to their question with 
 
 **Resolve the skill directory first.** Set `SKILL_DIR` to the absolute path of this
 skill's directory. In Claude Code, use `${CLAUDE_SKILL_DIR}` (your host substitutes it).
-On Codex, Gemini, OpenCode, or Pi, substitute the absolute skill path your host reported
+On other hosts (Antigravity, Codex, OpenCode, Pi, ...), substitute the absolute skill path your host reported
 when it loaded this skill. A Bash step's working directory is the user's project, not the
 skill dir, so every bundled-file reference below uses `$SKILL_DIR` — never a bare relative path.
 Set SKILL_DIR at the start of every Bash step that sources the helper — Bash tool calls run in separate shells and do not share variables.
@@ -26,11 +26,12 @@ Natural language question, e.g. `"What's my current approach to container networ
 
 ## Workflow
 
-1. **Bootstrap** — run the setup bootstrap above. This gives you `VAULT_PATH`, `WIKI_SOURCE`, `folders.*`, `paths.*`, and `io.*`.
+1. **Bootstrap** — run the setup bootstrap above. This gives you `VAULT_PATH`, `WIKI_SOURCE`, `folders.*` (including `folders.protected`), `paths.*`, and `io.*`. The query itself is read-only, but the optional file-back in step 6 writes — those writes must check `folders.protected` per §Protected paths in `references/setup.md`.
 
    **Probe I/O backend** — run via Bash:
    ```bash
    SKILL_DIR="${CLAUDE_SKILL_DIR}"   # Claude fills this; other hosts: set to the abs skill dir
+   VAULT_PATH="<vault path>"          # substitute the value resolved by the bootstrap
    source "$SKILL_DIR/scripts/wiki-io.sh"
    wiki_io_probe "${VAULT_PATH}"
    wiki_qmd_probe "${VAULT_PATH}"
@@ -38,8 +39,9 @@ Natural language question, e.g. `"What's my current approach to container networ
    ```
    - If `WIKI_IO_BACKEND` is `"cli"` → use CLI for all read/search/write operations. Consult `$SKILL_DIR/references/cli-patterns.md` for syntax.
    - If `WIKI_IO_BACKEND` is `"mcp"` → if this agent exposes Obsidian MCP tools
-     (Claude/Gemini/OpenCode name them `mcp__obsidian__*`; other agents may not have
-     them at all), probe `mcp__obsidian__list_directory` on the vault root and use MCP
+     (standalone servers expose `mcp__obsidian__*`; the Claude Code plugin-bundled
+     server exposes `mcp__plugin_llm-wiki_obsidian__*`; other agents may not have
+     them at all), probe the `list_directory` tool on the vault root and use MCP
      if it responds. Otherwise use file tools (Read/Write/Edit/Grep/Glob). Agents
      without MCP (e.g. Pi) always land on the CLI or file-tool tier — this is expected.
    - Commit to one I/O tier for the entire workflow. qmd availability is independent of the I/O tier.
@@ -90,6 +92,6 @@ Natural language question, e.g. `"What's my current approach to container networ
 6. **Offer to file**:
    - If the synthesized answer is substantial (>5 lines), ask:
      "This answer could be useful as a wiki page. Want me to file it as a knowledge page?"
-   - If yes: create a knowledge page in `{VAULT_PATH}/{folders.resources}/<domain>/` following the `knowledge` page type from the schema, then regenerate the index managed block (only if `{paths.index}` is non-empty — follow §Index management in `references/setup.md`), then append to wiki log.
+   - If yes: **before each write**, verify the target path is not inside `folders.protected` (see §Protected paths in `references/setup.md`); if it is, abort with the documented message. Then create a knowledge page in `{VAULT_PATH}/{folders.resources}/<domain>/` following the `knowledge` page type from the schema, regenerate the index managed block (only if `{paths.index}` is non-empty — follow §Index management in `references/setup.md`), and append to wiki log.
 
 7. **Report**: Present the answer with citations.

@@ -13,14 +13,15 @@ Every wiki operation (`/wiki-capture`, `/wiki-ingest`, `/wiki-query`, `/wiki-lin
 
 > **"Abort" semantics** — when a bootstrap step below says *abort with: `<message>`*, do exactly this: print the message to the user and stop the skill. Do not call any write tools, do not attempt a fallback path, do not guess a vault path.
 
-1. **Resolve the vault path.**
-   - Read the single-line file `~/.config/llm-wiki/vault`.
-   - If the file is missing or empty, abort with: `llm-wiki vault not configured — run the wiki-configure skill (Claude: /llm-wiki:wiki-configure) first.`
-   - The content is the absolute path to the user's Obsidian vault root. Call this `VAULT_PATH`.
+1. **Resolve the vault path and schema path.**
+   - Read `~/.config/llm-wiki/vault`.
+   - If the file is missing or its first line is empty, abort with: `llm-wiki vault not configured — run the wiki-configure skill (Claude: /llm-wiki:wiki-configure) first.`
+   - Line 1 is the absolute path to the user's Obsidian vault root. Call this `VAULT_PATH`. Preserve it verbatim (it may contain spaces).
+   - Line 2, if present, is the vault-relative path to the schema file. Call this `SCHEMA_PATH`. If line 2 is absent or empty (pointer files written before the system folder became remappable), default to `_System/wiki-schema.md`.
 
 2. **Read the schema.**
-   - Read `{VAULT_PATH}/_System/wiki-schema.md`.
-   - If missing, abort with: `Wiki schema not found at {VAULT_PATH}/_System/wiki-schema.md — run the wiki-configure skill (Claude: /llm-wiki:wiki-configure).`
+   - Read `{VAULT_PATH}/{SCHEMA_PATH}`.
+   - If missing, abort with: `Wiki schema not found at {VAULT_PATH}/{SCHEMA_PATH} — run the wiki-configure skill (Claude: /llm-wiki:wiki-configure).`
    - If the file contains any `{{PLACEHOLDER}}` markers (e.g. `{{VAULT_PATH}}`, `{{INBOX_FOLDER}}`), abort with: `Schema not yet filled in — run the wiki-configure skill (Claude: /llm-wiki:wiki-configure).`
 
 3. **Parse the `Vault Configuration` section of the schema.**
@@ -50,6 +51,7 @@ Every wiki operation (`/wiki-capture`, `/wiki-ingest`, `/wiki-query`, `/wiki-lin
      - wiki_log: "_System/wiki-log.md"
      - templates: "_System/Templates"
      - archive_sources: "_System/Archive/Sources"
+     - index: "Home.md"               # optional — empty string or missing to skip index operations
    ```
 
    Extract:
@@ -91,8 +93,9 @@ llm-wiki uses a three-tier I/O strategy. At bootstrap, the skill probes backends
 - Consult `$SKILL_DIR/references/cli-patterns.md` for command syntax
 
 **Tier 2 — Obsidian MCP** (fallback):
-- If CLI is unavailable (user hasn't enabled it, or Obsidian is not running), attempt `mcp__obsidian__list_directory` on the vault root
-- If MCP responds, use `mcp__obsidian__*` tools for the entire workflow
+- If CLI is unavailable (user hasn't enabled it, or Obsidian is not running), attempt the `list_directory` MCP tool on the vault root
+- If MCP responds, use the Obsidian MCP tools for the entire workflow
+- **Tool name prefixes vary by how the server was wired**: a standalone MCP config exposes `mcp__obsidian__<tool>`; the server bundled with the Claude Code plugin exposes `mcp__plugin_llm-wiki_obsidian__<tool>`. The tool basenames (`list_directory`, `read_note`, …) are identical — probe whichever prefix is present. Everywhere this document writes `mcp__obsidian__<tool>`, read it as "the `<tool>` tool of whichever Obsidian MCP server is connected".
 - **Advantage**: works without the Obsidian desktop app — reads vault files via the bundled MCP server
 - **Requirement**: `OBSIDIAN_VAULT_PATH` env var set before Claude Code started
 
@@ -101,7 +104,7 @@ llm-wiki uses a three-tier I/O strategy. At bootstrap, the skill probes backends
 - **Advantage**: always works — no external dependencies
 - **Caveat**: no wikilink resolution, no backlink-safe moves, no template engine
 
-**Probe once, commit fully.** Never mix tiers in a single skill invocation. If you branch to a lower tier, say so once in the user-facing report: `(note: using {tier} — {reason})`.
+**Probe once, commit fully.** Never mix tiers in a single skill invocation. If you branch to a lower tier, say so once in the user-facing report: `(note: using {tier} — {reason})`. One exemption: the §Index management rewrite below always uses Read/Write file tools for the marker-bounded block, whatever tier is active — that rewrite needs whole-file control and is exempt from this rule.
 
 ### Obsidian Headless (not an I/O tier)
 
@@ -121,15 +124,19 @@ The `io.headless` schema field records whether `ob` was detected at configure ti
 Run this Bash block once at the start of every skill (after resolving VAULT_PATH):
 
 ```bash
+SKILL_DIR="<absolute skill dir>"   # substitute (Claude Code: ${CLAUDE_SKILL_DIR})
+VAULT_PATH="<vault path>"          # substitute the value resolved in bootstrap step 1
 source "$SKILL_DIR/scripts/wiki-io.sh"
 wiki_io_probe "${VAULT_PATH}"
 echo "Backend: $WIKI_IO_BACKEND"
 ```
 
+`SKILL_DIR` and `VAULT_PATH` were resolved outside the shell (bootstrap steps), so substitute their literal values — Bash steps run in separate shells and share no variables.
+
 The script sets `WIKI_IO_BACKEND` to `"cli"` or `"mcp"` (meaning "try MCP next").
 
 - If `WIKI_IO_BACKEND` is `"cli"` → use CLI for all operations below.
-- If `WIKI_IO_BACKEND` is `"mcp"` → attempt one cheap MCP call (`mcp__obsidian__list_directory` on vault root).
+- If `WIKI_IO_BACKEND` is `"mcp"` → attempt one cheap MCP call (the `list_directory` tool on the vault root, whichever prefix is present — see the naming note in Tier 2 above).
   - If MCP responds → use MCP for all operations.
   - If MCP fails → downgrade to file tools for all operations.
 
@@ -245,7 +252,9 @@ If a planned write target falls inside a protected path, abort with:
 Refusing to modify `{path}` — listed in `folders.protected`. Update the schema via the wiki-configure skill (Claude: /llm-wiki:wiki-configure) to allow this folder, or pick a different destination.
 ```
 
-**Applies to**: `wiki-capture` (session log, knowledge pages, enrichments), `wiki-ingest` (source summary, knowledge pages, archive move), `wiki-lint --fix` (orphan cross-links, MOC updates, index rebuild). Each skill's workflow points to this section.
+**Applies to**: `wiki-capture` (session log, knowledge pages, enrichments), `wiki-ingest` (source summary, knowledge pages), `wiki-query` (filing an answer back as a knowledge page, index update, wiki log), `wiki-lint --fix` (orphan cross-links, MOC updates, index rebuild). Each skill's workflow points to this section.
+
+**Archive exemption**: the `wiki-ingest` archive move INTO `{paths.archive_sources}` is always allowed, even when that folder appears in `folders.protected` — receiving archived sources is that folder's purpose (and it is a default protection candidate in wiki-configure). Protection still governs everything else about it: never overwrite or edit an existing archived file (on filename collision, suffix the incoming file, e.g. `name (2).md`), and never write anything there other than the source being archived.
 
 **Reads are never blocked.** Skills may freely read protected files (e.g. copying template content into a new page) but must not modify the originals.
 

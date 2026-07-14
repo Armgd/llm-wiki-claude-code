@@ -9,10 +9,13 @@ The skills are agent-agnostic: they read the vault's schema, then talk to Obsidi
 | Agent | Skills | Obsidian I/O | Hooks |
 |---|---|---|---|
 | Claude Code | ✓ (`.agents/skills/` via `plugin.json`) | MCP (bundled `mcpvault` server) or CLI | ✓ native |
-| Codex | ✓ (auto-discovered) | MCP (manual config) or CLI | ✓ config-based |
-| Gemini CLI | ✓ (auto-discovered) | MCP (`${VAR}` supported) or CLI | ✓ config-based |
-| OpenCode | ✓ (auto-discovered) | MCP (`{env:VAR}` supported) or CLI | best-effort |
-| Pi | ✓ (auto-discovered) | CLI only (no MCP) | best-effort |
+| Antigravity CLI | ✓ (auto-discovered) | MCP (`/mcp` or `agy plugin import gemini`) or CLI | ✓ adapter (best-effort, unverified) |
+| Codex | ✓ (auto-discovered) | MCP (manual config) or CLI | ✗ (run wiki-capture manually) |
+| OpenCode | ✓ (auto-discovered) | MCP (`{env:VAR}` supported) or CLI | ✓ plugin adapter |
+| Pi | ✓ (auto-discovered) | CLI only (no MCP) | ✓ extension adapter |
+| Gemini CLI | deprecated | — | — |
+
+> **Gemini CLI is deprecated**: Google transitioned it to [Antigravity CLI](https://antigravity.google/blog/introducing-google-antigravity-cli); consumer accounts stopped being served on 2026-06-18 (enterprise Gemini Code Assist licenses and paid API keys still work — `wiring/SETUP-gemini.md` covers that case). Antigravity retains Agent Skills and a hook system; see `wiring/SETUP-antigravity.md`.
 
 ## Install
 
@@ -36,10 +39,11 @@ Every agent needs the vault configured once — run the `wiki-configure` skill (
 
 On Claude Code these are slash commands (`/llm-wiki:wiki-*`); on Codex/Gemini/OpenCode/Pi they're auto-discovered Agent Skills invoked by name or natural-language trigger.
 
-Three hooks (Claude native, Codex/Gemini config-based, OpenCode/Pi best-effort):
+Four hooks (Claude native; Antigravity/OpenCode/Pi via adapters under `wiring/`; Codex has no compatible hook system — its setup doc explains the manual workflow):
 - Change manifest on every `Write`/`Edit` (drives session capture)
-- Session-end reminder to run wiki-capture if noteworthy work was done
+- Once-per-session reminder to run wiki-capture when the session tracked file changes (on Claude Code this is delivered as hook JSON — a `systemMessage` from the Stop hook, `additionalContext` for the inbox nudge — because plain hook stdout never reaches the model)
 - Inbox nudge when unprocessed items pile up (configurable threshold in the schema)
+- Session-end cleanup of the per-session `/tmp` state (`SessionEnd`) — cleanup deliberately does NOT run on Stop, which fires after every turn and would wipe the change manifest mid-session
 
 ## Portability: the 3-tier I/O fallback
 
@@ -80,17 +84,21 @@ hooks/
     wiki-notify.sh
     wiki-stop.sh
     wiki-inbox-nudge.sh
-wiring/                      # per-agent setup docs + config/plugin files
-  SETUP-codex.md / SETUP-gemini.md / SETUP-opencode.md / SETUP-pi.md
-  codex/hooks.json
-  gemini/settings.hooks.json
+    wiki-cleanup.sh
+wiring/                      # per-agent setup docs + adapter files
+  SETUP-antigravity.md / SETUP-codex.md / SETUP-opencode.md / SETUP-pi.md
+  SETUP-gemini.md            # deprecated — kept for enterprise Gemini CLI holdouts
+  antigravity/wiki-hooks.json + wiki-hook-adapter.sh
   opencode/wiki-plugin.js
   pi/wiki-extension.ts
 AGENTS.md                    # instructions all agents read (Codex/OpenCode/Pi natively)
-CLAUDE.md / GEMINI.md        # shims that import AGENTS.md
+CLAUDE.md                    # shim that imports AGENTS.md (Antigravity/Codex/OpenCode/Pi read AGENTS.md natively)
 scripts/
   sync-skills.sh             # copies shared/ into every .agents/skills/*/
+  test-sync-skills.sh        # self-test for the sync mechanism (run by check.sh)
   check.sh                   # aggregate validation (see Development)
+eval/                        # promptfoo scenarios + evals catalog (see Evals)
+promptfooconfig.yaml         # promptfoo eval suite entry point
 test-fixtures/vault/         # minimal PARA vault for manual e2e walkthroughs
 reference.md                 # background and rationale
 ```
@@ -102,7 +110,7 @@ Two layers:
 - **Schema** — `{vault}/_System/wiki-schema.md` describes your vault's folder conventions, page types, and operation workflows. This is the single source of truth for everything the skills need to know about your vault. Edit it to change behavior.
 - **Skills** — thin adapters in `.agents/skills/wiki-*/SKILL.md`. Each skill runs a shared bootstrap (`references/setup.md`, synced from `shared/`) to load the schema, then executes its command using the detected I/O tier.
 
-All vault-specific values (paths, folder names, thresholds) live in the schema, not the skill code. The only thing outside the schema is `~/.config/llm-wiki/vault`, which tells hooks where to find the vault.
+All vault-specific values (paths, folder names, thresholds) live in the schema, not the skill code. The only thing outside the schema is the pointer file `~/.config/llm-wiki/vault`: line 1 is the absolute vault path, line 2 the vault-relative schema path (defaults to `_System/wiki-schema.md` when absent, so pre-existing single-line pointer files keep working). It tells hooks and the skill bootstrap where to find the vault and its schema, whatever the system folder is named.
 
 ## Development
 
@@ -119,9 +127,19 @@ Run the aggregate check before committing:
 bash scripts/check.sh
 ```
 
-It validates plugin/hooks/wiring JSON, shell syntax, skill sync, the OpenCode plugin, and that no skill or shared file leaks the Claude-only `${CLAUDE_PLUGIN_ROOT}` token.
+It validates plugin/hooks/eval JSON, shell syntax, the sync mechanism (via `test-sync-skills.sh`), skill sync, the OpenCode plugin, the Pi extension (when node supports type stripping), and that no skill or shared file leaks the Claude-only `${CLAUDE_PLUGIN_ROOT}` token.
 
 Walk through the `wiki-configure` skill against `test-fixtures/vault/` for first-time-setup flow. For each wiki command, use the fixture vault as the target and verify the expected files appear.
+
+### Evals
+
+`promptfooconfig.yaml` defines 20 scenarios (skill activation, anti-patterns, critical safety rules) against the Claude agent-SDK provider. The human-readable scenario definitions live in `eval/scenarios/*.json` and are cataloged in `eval/evals.json`; the promptfoo config is the executable form and must be kept in step with them when scenarios change. Run with:
+
+```bash
+ANTHROPIC_API_KEY=... npx promptfoo eval
+```
+
+Results land in `eval/results/` (gitignored). String-match tests catch cheap regressions; the llm-rubric tests need the API key for grading.
 
 ## Requirements
 
