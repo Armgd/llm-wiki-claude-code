@@ -6,7 +6,7 @@
 		"Run the setup bootstrap and resolve paths.index",
 		"If paths.index is non-empty, read the index file and extract the content between the managed-block markers FIRST",
 		"Treat pages listed in the managed block whose title or summary is relevant as priority candidates",
-		"Then run keyword search (mcp__obsidian__search_notes or Grep fallback) and merge results",
+		"Then run keyword search (obsidian search or Grep fallback) and merge results",
 		"If the markers are missing or the block is empty, fall through to keyword search without attempting to regenerate the block",
 		"Cite answers with [[wikilinks]] to the actual pages, not the index"
 	],

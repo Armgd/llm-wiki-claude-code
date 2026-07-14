@@ -8,7 +8,7 @@
 		"Abort with the message: 'llm-wiki vault not configured — run /llm-wiki:wiki-configure first.'",
 		"Do NOT guess a vault path",
 		"Do NOT create any files",
-		"Do NOT attempt fallback MCP probes once the bootstrap has aborted"
+		"Do NOT attempt fallback I/O probes once the bootstrap has aborted"
 	],
 	"success_criteria": [
 		"Output contains the message 'llm-wiki vault not configured' or instructs the user to run /llm-wiki:wiki-configure",

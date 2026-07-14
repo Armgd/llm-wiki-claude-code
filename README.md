@@ -2,18 +2,18 @@
 
 > An LLM-maintained wiki layer for your Obsidian vault. Captures session knowledge, ingests external sources, queries the wiki, and keeps it healthy — as a set of portable Agent Skills that run on Claude Code, Codex, Gemini CLI, OpenCode, and Pi.
 
-The skills are agent-agnostic: they read the vault's schema, then talk to Obsidian through whichever I/O tier is available (CLI, MCP, or plain file tools) and drive the same five operations regardless of which agent is running them.
+The skills are agent-agnostic: they read the vault's schema, then talk to Obsidian through whichever I/O tier is available (CLI or plain file tools) and drive the same five operations regardless of which agent is running them.
 
 ## Supported agents
 
-| Agent | Skills | Obsidian I/O | Hooks |
-|---|---|---|---|
-| Claude Code | ✓ (`.agents/skills/` via `plugin.json`) | MCP (bundled `mcpvault` server) or CLI | ✓ native |
-| Antigravity CLI | ✓ (auto-discovered) | MCP (`/mcp` or `agy plugin import gemini`) or CLI | ✓ adapter (best-effort, unverified) |
-| Codex | ✓ (auto-discovered) | MCP (manual config) or CLI | ✗ (run wiki-capture manually) |
-| OpenCode | ✓ (auto-discovered) | MCP (`{env:VAR}` supported) or CLI | ✓ plugin adapter |
-| Pi | ✓ (auto-discovered) | CLI only (no MCP) | ✓ extension adapter |
-| Gemini CLI | deprecated | — | — |
+| Agent | Skills | Hooks |
+|---|---|---|
+| Claude Code | ✓ (`.agents/skills/` via `plugin.json`) | ✓ native |
+| Antigravity CLI | ✓ (auto-discovered) | ✓ adapter (best-effort, unverified) |
+| Codex | ✓ (auto-discovered) | ✗ (run wiki-capture manually) |
+| OpenCode | ✓ (auto-discovered) | ✓ plugin adapter |
+| Pi | ✓ (auto-discovered) | ✓ extension adapter |
+| Gemini CLI | deprecated | — |
 
 > **Gemini CLI is deprecated**: Google transitioned it to [Antigravity CLI](https://antigravity.google/blog/introducing-google-antigravity-cli); consumer accounts stopped being served on 2026-06-18 (enterprise Gemini Code Assist licenses and paid API keys still work — `wiring/SETUP-gemini.md` covers that case). Antigravity retains Agent Skills and a hook system; see `wiring/SETUP-antigravity.md`.
 
@@ -45,13 +45,12 @@ Four hooks (Claude native; Antigravity/OpenCode/Pi via adapters under `wiring/`;
 - Inbox nudge when unprocessed items pile up (configurable threshold in the schema)
 - Session-end cleanup of the per-session `/tmp` state (`SessionEnd`) — cleanup deliberately does NOT run on Stop, which fires after every turn and would wipe the change manifest mid-session
 
-## Portability: the 3-tier I/O fallback
+## Portability: the 2-tier I/O fallback
 
 Every skill sources `shared/scripts/wiki-io.sh`, which probes for Obsidian access in order and exports `WIKI_IO_BACKEND`:
 
-1. **CLI** — the `obsidian` CLI, if installed. Works everywhere, including Pi (no MCP support).
-2. **MCP** — the `obsidian` MCP server (bundled for Claude via `mcpvault`; manual config for Codex/Gemini/OpenCode), when the CLI isn't available.
-3. **File tools** — plain Read/Write/Glob/Grep, when neither CLI nor MCP is available.
+1. **CLI** — the `obsidian` CLI, if installed. Works everywhere.
+2. **File tools** — plain Read/Write/Glob/Grep, when the CLI isn't available.
 
 Because no skill body hardcodes a specific I/O mechanism, the same `.agents/skills/` directory runs unmodified on any agent that supports the Agent Skills convention — the skill just adapts to whichever tier it finds at runtime.
 
@@ -59,7 +58,7 @@ Because no skill body hardcodes a specific I/O mechanism, the same `.agents/skil
 
 ```
 .claude-plugin/
-  plugin.json               # Claude manifest — skills path + bundled mcpvault MCP server
+  plugin.json               # Claude manifest — skills path
 .agents/skills/              # canonical skill bodies, auto-discovered by Codex/Gemini/OpenCode/Pi
   wiki-capture/SKILL.md
   wiki-ingest/SKILL.md
@@ -145,7 +144,7 @@ Results land in `eval/results/` (gitignored). String-match tests catch cheap reg
 
 - `bash`, `jq` — required for hooks, and for the obsidian-CLI I/O tier (`wiki_cli_move` uses `jq` to JSON-encode paths safely).
 - An Obsidian vault (PARA-shape, names are user-defined)
-- Node.js 18+ if using the MCP tier (bundled `mcpvault` server runs via `npx`), and to run `scripts/check.sh` (it `node --check`s the OpenCode adapter)
+- Node.js 18+ to run `scripts/check.sh` (it `node --check`s the OpenCode adapter)
 - One of: Claude Code, Codex, Gemini CLI, OpenCode, or Pi
 
 ## License

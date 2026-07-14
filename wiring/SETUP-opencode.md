@@ -6,19 +6,9 @@ Verified: 2026-07-13 against opencode 1.17.18 (skills discovery + plugin hooks t
 OpenCode reads `.agents/skills/` and `.claude/skills/` directly. Point it at this repo's
 `.agents/skills/`.
 
-## MCP (Obsidian) — optional
-`opencode.json` uses `{env:VAR}` and a command array:
-```json
-{
-  "mcp": {
-    "obsidian": {
-      "type": "local",
-      "command": ["npx", "-y", "@bitbonsai/mcpvault@latest", "{env:OBSIDIAN_VAULT_PATH}"],
-      "enabled": true
-    }
-  }
-}
-```
+## I/O
+Install the `obsidian` CLI so the skills use the CLI tier (preferred); otherwise
+they fall back to file tools. No other wiring needed.
 
 ## Hooks — optional
 Copy `wiring/opencode/wiki-plugin.js` to `.opencode/plugins/wiki-plugin.js` and replace

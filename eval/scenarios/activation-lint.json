@@ -5,7 +5,7 @@
 	"expected_behavior": [
 		"Route to wiki-lint skill",
 		"Run bootstrap before proceeding",
-		"Inventory the wiki (mcp__obsidian__get_vault_stats or Glob+wc fallback)",
+		"Inventory the wiki (obsidian CLI or Glob+wc fallback)",
 		"Check for orphans (no inbound [[wikilinks]])",
 		"Check for broken wikilinks",
 		"Check the inbox folder for unprocessed items",

@@ -15,7 +15,6 @@ tags: [wiki, schema, system]
 - wiki_source: {{WIKI_SOURCE}}
 - inbox_threshold: {{INBOX_THRESHOLD}}
 - io:
-  - preference: {{IO_PREFERENCE}}    # "cli" | "mcp" | "auto" (auto = probe at runtime)
   - cli_path: {{CLI_PATH}}           # path to obsidian binary, or empty
   - headless: {{HEADLESS_AVAILABLE}} # "true" | "false"
   - qmd: {{QMD_AVAILABLE}}           # "true" | "false" — qmd semantic search available

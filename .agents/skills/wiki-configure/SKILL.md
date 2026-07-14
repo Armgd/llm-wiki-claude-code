@@ -1,12 +1,12 @@
 ---
 name: wiki-configure
-description: "Use this skill to set up (or reconfigure) the llm-wiki plugin for a user's Obsidian vault. Triggers when the user runs the wiki-configure skill (Claude: `/llm-wiki:wiki-configure`), asks to \"set up llm-wiki\", \"configure the wiki plugin\", or after first installation of the plugin. Inventories the vault, asks the user to map folders to wiki roles, writes the vault path file and the filled-in schema, and instructs the user how to set the OBSIDIAN_VAULT_PATH env var for the bundled MCP server."
-allowed-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__obsidian__list_directory, mcp__obsidian__search_notes, mcp__plugin_llm-wiki_obsidian__list_directory, mcp__plugin_llm-wiki_obsidian__search_notes
+description: "Use this skill to set up (or reconfigure) the llm-wiki plugin for a user's Obsidian vault. Triggers when the user runs the wiki-configure skill (Claude: `/llm-wiki:wiki-configure`), asks to \"set up llm-wiki\", \"configure the wiki plugin\", or after first installation of the plugin. Inventories the vault, asks the user to map folders to wiki roles, and writes the vault path file and the filled-in schema."
+allowed-tools: Read, Write, Edit, Grep, Glob, Bash
 ---
 
 # wiki-configure skill (Claude: `/llm-wiki:wiki-configure`)
 
-Interactive setup for the llm-wiki plugin. Unlike the other wiki commands, this one runs WITHOUT the bootstrap in `references/setup.md` — it's the setup itself. Obsidian MCP tools may be unavailable on first run (they need the vault path this command sets); gracefully fall back to `Glob`.
+Interactive setup for the llm-wiki plugin. Unlike the other wiki commands, this one runs WITHOUT the bootstrap in `references/setup.md` — it's the setup itself.
 
 ## Resolve the skill directory first
 
@@ -77,13 +77,12 @@ Probe for available I/O backends to pre-populate the schema:
      HEADLESS_AVAILABLE="false"
    fi
    ```
-   Headless requires an Obsidian account with Sync subscription and `ob login`. It keeps vault files in sync on server/CI but does not provide note read/write commands — the plugin still uses MCP or file tools for I/O in headless environments.
+   Headless requires an Obsidian account with Sync subscription and `ob login`. It keeps vault files in sync on server/CI but does not provide note read/write commands — the plugin still uses file tools for I/O in headless environments.
 
-3. **Present findings and ask preference**:
-   - If CLI found → "Obsidian CLI detected at `{CLI_PATH}`. Recommended as primary I/O backend (better context management via stdout piping). Use CLI as preferred backend? [Y/n]"
-   - If CLI not found → "Obsidian CLI not detected. You can install it from Obsidian Settings → General → Command line interface. For now, the plugin will use MCP or file tools. Set I/O preference to `auto` (re-detect each session)? [Y/n]"
+3. **Present findings** (informational — the runtime probe re-detects each session):
+   - If CLI found → "Obsidian CLI detected at `{CLI_PATH}` — it will be used as the primary I/O backend (better context management via stdout piping)."
+   - If CLI not found → "Obsidian CLI not detected. You can install it from Obsidian Settings → General → Command line interface. For now, the plugin will use file tools."
    - If Headless found → note: "Obsidian Headless detected — vault sync works without the desktop app (requires Obsidian account + `ob login`)."
-   - Capture `IO_PREFERENCE`: `"cli"` if user confirms CLI, `"auto"` otherwise
 
 ### 2c. Detect and configure qmd (optional)
 
@@ -134,8 +133,7 @@ Probe for qmd, a local semantic search engine for markdown files:
 
 ### 3. Inventory the vault
 
-- Try the `list_directory` MCP tool on the vault root (standalone servers expose it as `mcp__obsidian__list_directory`; the Claude Code plugin-bundled server as `mcp__plugin_llm-wiki_obsidian__list_directory`).
-- If MCP is unavailable (expected on first run), use `Glob` with the pattern `{vault}/*` to list top-level folders.
+- Use `Glob` with the pattern `{vault}/*` to list top-level folders.
 - Present the list of folders found, with file counts per folder (use `Glob '{folder}/*.md'` to count).
 
 ### 4. Map folders to roles
@@ -163,7 +161,7 @@ Protected folders are paths skills must never write/move/delete into (reads are 
 
 ### 5. Ask about project sub-structure
 
-- Inventory the mapped projects folder (MCP or Glob).
+- Inventory the mapped projects folder (Glob).
 - Show the user what's there and offer shape choices:
   - (a) Work/Personal split (e.g. `Work/`, `Personal/` folders under Projects)
   - (b) Client-based (e.g. `Work/{Client}/{Project}/`)
@@ -178,7 +176,7 @@ The index is an optional content-oriented catalog the LLM maintains inside a use
 - **Scan for an existing index note**:
   - Look at the vault root first. If a note with `type: index` in frontmatter exists there, propose its path.
   - If none at root, search the top level for notes whose filename matches `Home.md`, `Index.md`, or `Dashboard.md` (case-insensitive).
-  - Fallback search: `Grep -l "^type: index$" {VAULT_PATH}/**/*.md` (MCP equivalent: `mcp__obsidian__search_notes` with `searchFrontmatter: true`).
+  - Fallback search: `Grep -l "^type: index$" {VAULT_PATH}/**/*.md`.
 
 - **Ask the user** based on what you found:
   - **Found one** → "You have an index note at `{path}`. Use this as the wiki index? [Y/n]" Enter accepts.
@@ -222,7 +220,6 @@ On confirmation:
    - `{{NOTES_FOLDER}}` → mapped notes folder or empty string
    - `{{INDEX_PATH}}` → chosen index path (e.g. `Home.md`) or empty string if the user skipped
    - `{{PROTECTED_FOLDERS}}` → inline YAML array of the captured `PROTECTED_FOLDERS` list. Examples: `["_System/Templates", "_System/Archive/Sources"]` or `[]` when the user opted out of everything. Quote each entry; comma-separate.
-   - `{{IO_PREFERENCE}}` → chosen I/O preference (`"cli"`, `"mcp"`, or `"auto"`)
    - `{{CLI_PATH}}` → path to obsidian binary, or empty string
    - `{{HEADLESS_AVAILABLE}}` → `"true"` or `"false"`
    - `{{QMD_AVAILABLE}}` → `"true"` or `"false"`
@@ -283,17 +280,7 @@ On confirmation:
 
 Print the relevant instructions based on detected backends:
 
-**Always print (MCP fallback)**:
-```
-To enable the bundled Obsidian MCP server (fallback when CLI is unavailable),
-add this line to your shell profile (~/.zshrc, ~/.bashrc, etc.):
-
-  export OBSIDIAN_VAULT_PATH="{VAULT_PATH}"
-
-Then restart Claude Code.
-```
-
-**If CLI was detected, also print**:
+**If CLI was detected, print**:
 ```
 Obsidian CLI detected at {CLI_PATH}.
 The plugin will prefer CLI for better context management.
@@ -304,6 +291,7 @@ Make sure Obsidian is running when you use wiki commands.
 ```
 Tip: Install Obsidian CLI for better performance:
   Obsidian → Settings → General → Command line interface → Enable
+Until then, the plugin reads and writes vault files directly with file tools.
 ```
 
 **If Headless was detected, also print**:
@@ -311,7 +299,7 @@ Tip: Install Obsidian CLI for better performance:
 Obsidian Headless detected — vault sync works without the desktop app.
 On server/CI, Headless keeps vault files in sync via Obsidian Sync.
 Note: Headless is a sync service, not an I/O backend — the plugin
-uses MCP or file tools to read/write notes in headless environments.
+uses file tools to read/write notes in headless environments.
 Requires: Obsidian account + Sync subscription + `ob login`.
 ```
 
@@ -354,7 +342,5 @@ Schema: {vault}/{SYSTEM_FOLDER}/wiki-schema.md
 Pointer file: ~/.config/llm-wiki/vault (vault path + schema path)
 
 Next:
-1. Add export OBSIDIAN_VAULT_PATH="{VAULT_PATH}" to your shell profile
-2. Restart Claude Code
-3. Run wiki-capture (Claude: /llm-wiki:wiki-capture) at the end of your next work session
+1. Run wiki-capture (Claude: /llm-wiki:wiki-capture) at the end of your next work session
 ```

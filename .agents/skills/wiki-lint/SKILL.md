@@ -2,7 +2,7 @@
 name: wiki-lint
 description: "Use this skill to health-check an Obsidian-based LLM wiki \u2014 detect orphans, broken wikilinks, stale session-log TODOs, unprocessed inbox items, and knowledge gaps. Triggers when the user runs the wiki-lint skill (Claude: `/llm-wiki:wiki-lint`), asks to \"audit my wiki\", \"run a wiki health check\", or similar maintenance requests. Supports an optional --fix flag for safe repairs."
 argument-hint: "[--fix]"
-allowed-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__obsidian__search_notes, mcp__obsidian__read_note, mcp__obsidian__get_vault_stats, mcp__obsidian__list_directory, mcp__obsidian__get_frontmatter, mcp__obsidian__get_notes_info, mcp__plugin_llm-wiki_obsidian__search_notes, mcp__plugin_llm-wiki_obsidian__read_note, mcp__plugin_llm-wiki_obsidian__get_vault_stats, mcp__plugin_llm-wiki_obsidian__list_directory, mcp__plugin_llm-wiki_obsidian__get_frontmatter, mcp__plugin_llm-wiki_obsidian__get_notes_info
+allowed-tools: Read, Write, Edit, Grep, Glob, Bash
 ---
 
 # wiki-lint skill (Claude: `/llm-wiki:wiki-lint`)
@@ -37,12 +37,7 @@ Optional `--fix` flag to auto-apply safe repairs (add cross-references, link orp
    ```
    (wiki-lint intentionally skips the qmd probe — its checks are structural, not content search.)
    - If `WIKI_IO_BACKEND` is `"cli"` → use CLI for all read/search/write operations. Consult `$SKILL_DIR/references/cli-patterns.md` for syntax.
-   - If `WIKI_IO_BACKEND` is `"mcp"` → if this agent exposes Obsidian MCP tools
-     (standalone servers expose `mcp__obsidian__*`; the Claude Code plugin-bundled
-     server exposes `mcp__plugin_llm-wiki_obsidian__*`; other agents may not have
-     them at all), probe the `list_directory` tool on the vault root and use MCP
-     if it responds. Otherwise use file tools (Read/Write/Edit/Grep/Glob). Agents
-     without MCP (e.g. Pi) always land on the CLI or file-tool tier — this is expected.
+   - If `WIKI_IO_BACKEND` is `"filetool"` → use file tools (Read/Write/Edit/Grep/Glob).
    - Commit to one tier for the entire workflow.
 
 2. **Inventory the wiki**:
@@ -51,7 +46,6 @@ Optional `--fix` flag to auto-apply safe repairs (add cross-references, link orp
      obsidian tags counts
      obsidian search query="wiki-source:" limit=500
      ```
-   - **MCP**: `mcp__obsidian__get_vault_stats` + `mcp__obsidian__list_directory` + `mcp__obsidian__search_notes`
    - **File tools**: `Glob '{VAULT_PATH}/**/*.md'` + Bash `wc -l`; `Grep "wiki-source:"` for wiki pages
    - Count pages by type: session-log, knowledge, source-summary
 
@@ -76,7 +70,7 @@ Optional `--fix` flag to auto-apply safe repairs (add cross-references, link orp
      obsidian unresolved
      ```
      Returns all broken `[[wikilinks]]` directly.
-   - **MCP/File tools**: Search for `[[wikilinks]]` across the vault and resolve each against existing files
+   - **File tools**: Search for `[[wikilinks]]` across the vault and resolve each against existing files
    - Report: list of broken links that could become knowledge pages
 
 6. **Check inbox**:

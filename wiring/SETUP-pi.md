@@ -9,13 +9,9 @@ Pi auto-discovers Agent Skills from `.agents/skills/` (project, up to git root) 
 ## Instructions
 Pi reads `AGENTS.md` natively (and `CLAUDE.md` as an alias). No shim needed.
 
-## I/O — no MCP
-Pi has no MCP by design. Install the Obsidian CLI so the skills use the CLI tier
-(preferred), otherwise they fall back to file tools:
-```bash
-# install the `obsidian` CLI per its docs; the skills probe for it automatically
-```
-No MCP config file exists for Pi.
+## I/O
+Install the `obsidian` CLI so the skills use the CLI tier (preferred); otherwise
+they fall back to file tools. No other wiring needed.
 
 ## Hooks — optional
 Copy `wiring/pi/wiki-extension.ts` to `.pi/extensions/wiki-extension.ts` and replace

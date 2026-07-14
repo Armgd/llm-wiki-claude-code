@@ -2,7 +2,7 @@
 name: wiki-capture
 description: "Use this skill to capture session knowledge into an Obsidian-based LLM wiki. Triggers when the user runs the wiki-capture skill (Claude: `/llm-wiki:wiki-capture`), asks to \"capture this session\", \"file this session into the wiki\", or similar end-of-session knowledge persistence requests. Produces a session log in the vault plus optional knowledge page creation and enrichments."
 argument-hint: "[project-name]"
-allowed-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__obsidian__search_notes, mcp__obsidian__read_note, mcp__obsidian__read_multiple_notes, mcp__obsidian__write_note, mcp__obsidian__patch_note, mcp__obsidian__update_frontmatter, mcp__obsidian__get_frontmatter, mcp__obsidian__list_directory, mcp__obsidian__get_notes_info, mcp__plugin_llm-wiki_obsidian__search_notes, mcp__plugin_llm-wiki_obsidian__read_note, mcp__plugin_llm-wiki_obsidian__read_multiple_notes, mcp__plugin_llm-wiki_obsidian__write_note, mcp__plugin_llm-wiki_obsidian__patch_note, mcp__plugin_llm-wiki_obsidian__update_frontmatter, mcp__plugin_llm-wiki_obsidian__get_frontmatter, mcp__plugin_llm-wiki_obsidian__list_directory, mcp__plugin_llm-wiki_obsidian__get_notes_info
+allowed-tools: Read, Write, Edit, Grep, Glob, Bash
 ---
 
 # wiki-capture skill (Claude: `/llm-wiki:wiki-capture`)
@@ -38,12 +38,7 @@ Optional project name, e.g. `my-awesome-project` (Claude: `/llm-wiki:wiki-captur
    echo "Backend: $WIKI_IO_BACKEND | qmd: $WIKI_QMD_AVAILABLE"
    ```
    - If `WIKI_IO_BACKEND` is `"cli"` → use CLI for all read/search/write operations. Consult `$SKILL_DIR/references/cli-patterns.md` for syntax.
-   - If `WIKI_IO_BACKEND` is `"mcp"` → if this agent exposes Obsidian MCP tools
-     (standalone servers expose `mcp__obsidian__*`; the Claude Code plugin-bundled
-     server exposes `mcp__plugin_llm-wiki_obsidian__*`; other agents may not have
-     them at all), probe the `list_directory` tool on the vault root and use MCP
-     if it responds. Otherwise use file tools (Read/Write/Edit/Grep/Glob). Agents
-     without MCP (e.g. Pi) always land on the CLI or file-tool tier — this is expected.
+   - If `WIKI_IO_BACKEND` is `"filetool"` → use file tools (Read/Write/Edit/Grep/Glob).
    - Commit to one I/O tier for the entire workflow. qmd availability is independent of the I/O tier.
 
 2. **Gather session context**:
@@ -63,7 +58,6 @@ Optional project name, e.g. `my-awesome-project` (Claude: `/llm-wiki:wiki-captur
 
    **If `WIKI_QMD_AVAILABLE` is `"false"`** (keyword search fallback):
    - **CLI**: `obsidian search query="<keywords>" limit=20` via Bash — pipe through `head` if results are numerous
-   - **MCP**: `mcp__obsidian__search_notes` with query keywords
    - **File tools**: `Grep` over `{VAULT_PATH}/**/*.md`
 
    **Both paths**: check if knowledge pages already exist for discovered patterns (avoid duplicates). Identify existing notes that could be enriched.
@@ -80,7 +74,6 @@ Optional project name, e.g. `my-awesome-project` (Claude: `/llm-wiki:wiki-captur
    - Set `wiki-source: {WIKI_SOURCE}` in frontmatter
    - Link to knowledge pages with `[[wikilinks]]`
    - **CLI**: `obsidian create path="<resolved-path>" content="<full-content>" silent` via Bash
-   - **MCP**: `mcp__obsidian__write_note`
    - **File tools**: `Write {VAULT_PATH}/<path>`
    - Once the session log is written, clear the manifest read in step 2 (`: > <manifest>`) so a second capture in this session doesn't re-report the same changes.
 

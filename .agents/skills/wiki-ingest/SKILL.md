@@ -2,7 +2,7 @@
 name: wiki-ingest
 description: "Use this skill to ingest an external source (article, PDF, meeting notes) into an Obsidian-based LLM wiki. Triggers when the user runs the wiki-ingest skill (Claude: `/llm-wiki:wiki-ingest`), asks to \"ingest this article\", \"summarize and file this source\", or similar source-processing requests. Produces a source summary page cross-referenced with existing knowledge and moves the original to the vault's archive."
 argument-hint: "<path-to-source-note-relative-to-vault>"
-allowed-tools: Read, Write, Edit, Grep, Glob, Bash, mcp__obsidian__search_notes, mcp__obsidian__read_note, mcp__obsidian__write_note, mcp__obsidian__patch_note, mcp__obsidian__update_frontmatter, mcp__obsidian__get_frontmatter, mcp__obsidian__list_directory, mcp__obsidian__move_note, mcp__obsidian__move_file, mcp__plugin_llm-wiki_obsidian__search_notes, mcp__plugin_llm-wiki_obsidian__read_note, mcp__plugin_llm-wiki_obsidian__write_note, mcp__plugin_llm-wiki_obsidian__patch_note, mcp__plugin_llm-wiki_obsidian__update_frontmatter, mcp__plugin_llm-wiki_obsidian__get_frontmatter, mcp__plugin_llm-wiki_obsidian__list_directory, mcp__plugin_llm-wiki_obsidian__move_note, mcp__plugin_llm-wiki_obsidian__move_file
+allowed-tools: Read, Write, Edit, Grep, Glob, Bash
 ---
 
 # wiki-ingest skill (Claude: `/llm-wiki:wiki-ingest`)
@@ -38,17 +38,11 @@ Path to the source note, relative to the vault root, e.g. `"00 - Inbox/The AI La
    echo "Backend: $WIKI_IO_BACKEND | qmd: $WIKI_QMD_AVAILABLE"
    ```
    - If `WIKI_IO_BACKEND` is `"cli"` → use CLI for all read/search/write operations. Consult `$SKILL_DIR/references/cli-patterns.md` for syntax.
-   - If `WIKI_IO_BACKEND` is `"mcp"` → if this agent exposes Obsidian MCP tools
-     (standalone servers expose `mcp__obsidian__*`; the Claude Code plugin-bundled
-     server exposes `mcp__plugin_llm-wiki_obsidian__*`; other agents may not have
-     them at all), probe the `list_directory` tool on the vault root and use MCP
-     if it responds. Otherwise use file tools (Read/Write/Edit/Grep/Glob). Agents
-     without MCP (e.g. Pi) always land on the CLI or file-tool tier — this is expected.
+   - If `WIKI_IO_BACKEND` is `"filetool"` → use file tools (Read/Write/Edit/Grep/Glob).
    - Commit to one I/O tier for the entire workflow. qmd availability is independent of the I/O tier.
 
 2. **Read the source**:
    - **CLI**: `obsidian read path="<argument>"` via Bash — pipe through `head -100` for initial scan, then read in full if needed
-   - **MCP**: `mcp__obsidian__read_note` with the argument path
    - **File tools**: `Read {VAULT_PATH}/<argument>`
    - If the source has images, read them separately for additional context
 
@@ -71,7 +65,6 @@ Path to the source note, relative to the vault root, e.g. `"00 - Inbox/The AI La
 
    **If `WIKI_QMD_AVAILABLE` is `"false"`** (keyword search fallback):
    - **CLI**: `obsidian search query="<keywords from key claims>" limit=20` via Bash
-   - **MCP**: `mcp__obsidian__search_notes` with keywords
    - **File tools**: `Grep` across `{VAULT_PATH}/**/*.md`
 
    **Both paths**: identify potential cross-references and contradictions.
@@ -105,8 +98,7 @@ Path to the source note, relative to the vault root, e.g. `"00 - Inbox/The AI La
      ```bash
      obsidian eval "await app.fileManager.renameFile(app.vault.getAbstractFileByPath('<argument>'), '{paths.archive_sources}/<filename>')"
      ```
-     If eval fails, fall back to the MCP or file-tool method below.
-   - **MCP**: `mcp__obsidian__move_note` — preserves inbound `[[wikilinks]]`.
+     If eval fails, fall back to the file-tool method below.
    - **File tools**: `Bash mv {VAULT_PATH}/<argument> {VAULT_PATH}/{paths.archive_sources}/` **and** rewrite inbound wikilinks: `Grep` the vault for the old filename and `Edit` each match. Flag any link that can't be cleanly rewritten in the wiki log.
 
 10. **Update the index** (only if `{paths.index}` is non-empty):

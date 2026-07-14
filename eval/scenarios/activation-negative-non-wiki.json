@@ -11,7 +11,7 @@
 		"Uses Python with csv or pandas",
 		"Reads CSV file and sorts by revenue column",
 		"Does not mention wiki-capture or wiki-ingest or wiki-query or wiki-lint or wiki-configure",
-		"Does not mention OBSIDIAN_VAULT_PATH or _System/wiki-schema.md"
+		"Does not mention _System/wiki-schema.md"
 	],
 	"mode": "string_match"
 }

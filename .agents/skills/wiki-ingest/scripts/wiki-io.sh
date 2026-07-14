@@ -4,11 +4,11 @@
 # Usage (from SKILL.md Bash steps):
 #   source "$SKILL_DIR/scripts/wiki-io.sh"   # SKILL_DIR = abs path of the skill dir
 #   wiki_io_probe "${VAULT_PATH}"
-#   echo "$WIKI_IO_BACKEND"   # "cli" | "mcp" | "filetool"
+#   echo "$WIKI_IO_BACKEND"   # "cli" | "filetool"
 #
 # After sourcing and probing, use the wiki_cli_* wrappers when
-# WIKI_IO_BACKEND="cli". For "mcp" and "filetool" backends, the
-# LLM probes MCP availability itself and may downgrade to "filetool".
+# WIKI_IO_BACKEND="cli". For "filetool", the LLM uses its file tools
+# (Read/Write/Edit/Grep/Glob) directly on the vault.
 #
 # NOTE: No `set -euo pipefail` here. This file is sourced, not executed.
 # Strict mode would kill the calling shell when CLI wrappers return
@@ -73,7 +73,7 @@ _probe_qmd() {
 
 # wiki_io_probe <vault_path>
 #   Detects the best available I/O backend and exports:
-#     WIKI_IO_BACKEND  — "cli" | "mcp"  (LLM may further downgrade to "filetool")
+#     WIKI_IO_BACKEND  — "cli" | "filetool"
 #     WIKI_IO_CLI_PATH — absolute path to obsidian binary, or ""
 wiki_io_probe() {
   local vault_path="${1:?wiki_io_probe requires vault_path as first argument}"
@@ -83,9 +83,7 @@ wiki_io_probe() {
     export WIKI_IO_CLI_PATH
     WIKI_IO_CLI_PATH="$(command -v obsidian)"
   else
-    # MCP backend: the LLM probes MCP tool availability itself and may
-    # downgrade to "filetool" if no MCP server is connected.
-    export WIKI_IO_BACKEND="mcp"
+    export WIKI_IO_BACKEND="filetool"
     export WIKI_IO_CLI_PATH=""
   fi
 }

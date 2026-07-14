@@ -50,7 +50,7 @@ The test: Every changed line should trace directly to the user's request.
 - **wiki-ingest** — process an external source (article, PDF, meeting notes) into the wiki, cross-referenced with existing knowledge.
 - **wiki-query** — answer a natural-language question against the wiki with wikilink citations, optionally filing the answer back in.
 - **wiki-lint** — health-check the wiki: orphans, broken wikilinks, stale TODOs, unprocessed inbox items, knowledge gaps.
-- **wiki-configure** — set up or reconfigure the plugin for a vault: map folders to wiki roles, write the schema, wire the MCP server.
+- **wiki-configure** — set up or reconfigure the plugin for a vault: map folders to wiki roles, write the schema.
 
 These are Agent Skills, auto-discovered from `.agents/skills/`. Any agent runtime that supports the Agent Skills convention picks them up automatically — no separate registration step.
 
@@ -59,4 +59,4 @@ These are Agent Skills, auto-discovered from `.agents/skills/`. Any agent runtim
 - **Claude Code** reads this file via `CLAUDE.md` (`@AGENTS.md` import).
 - **Antigravity CLI, Codex, OpenCode, Pi** read `AGENTS.md` natively — no shim needed.
 - **Gemini CLI** (deprecated, superseded by Antigravity CLI): no `GEMINI.md` shim is shipped anymore — enterprise holdouts can set `context.fileName` to `AGENTS.md` or add their own one-line `@AGENTS.md` shim (see `wiring/SETUP-gemini.md`).
-- MCP server and hook wiring per agent live under `wiring/` — see that directory for setup instructions.
+- Hook wiring per agent lives under `wiring/` — see that directory for setup instructions.

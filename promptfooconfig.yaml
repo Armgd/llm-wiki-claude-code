@@ -69,9 +69,6 @@ tests:
       - type: icontains
         value: wiki-schema.md
         metric: criterion/writes-schema
-      - type: icontains
-        value: OBSIDIAN_VAULT_PATH
-        metric: criterion/mentions-obsidian-vault-path-env
     metadata:
       plugin: llm-wiki
       scenario: activation-configure
@@ -162,7 +159,6 @@ tests:
         metric: criterion/no-wiki-skill-mentioned
       - type: not-icontains-any
         value:
-          - OBSIDIAN_VAULT_PATH
           - wiki-schema
           - llm-wiki
         metric: criterion/no-wiki-config-mentioned
@@ -289,9 +285,9 @@ tests:
       mode: llm_judge
       skills:
         - wiki-capture
-  - description: "[llm-wiki] Skills fall back to file tools when both CLI and MCP are unavailable"
+  - description: "[llm-wiki] Skills fall back to file tools when the CLI is unavailable"
     vars:
-      query: "Neither Obsidian CLI nor MCP server is available. Run /llm-wiki:wiki-query \"What deployment patterns do we use?\" using the wiki at /tmp/test-vault with a pre-populated schema."
+      query: "The Obsidian CLI is not available. Run /llm-wiki:wiki-query \"What deployment patterns do we use?\" using the wiki at /tmp/test-vault with a pre-populated schema."
     assert:
       - type: llm-rubric
         value: Output mentions using file tools as fallback
@@ -308,25 +304,6 @@ tests:
     metadata:
       plugin: llm-wiki
       scenario: critical-cli-fallback-to-filetool
-      mode: llm_judge
-      skills:
-        - wiki-query
-  - description: "[llm-wiki] Skills fall back to MCP when CLI is unavailable"
-    vars:
-      query: "The Obsidian CLI binary is not on PATH and `obsidian help` fails. Run /llm-wiki:wiki-query \"What is container networking?\" using the wiki at /tmp/test-vault with a pre-populated schema."
-    assert:
-      - type: llm-rubric
-        value: Output mentions using MCP or file tools as fallback
-        metric: judge/mentions-mcp-or-filetool-fallback
-      - type: llm-rubric
-        value: No Bash calls containing 'obsidian read' or 'obsidian search' appear
-        metric: judge/no-cli-calls
-      - type: llm-rubric
-        value: The query still produces a synthesized answer
-        metric: judge/answer-produced
-    metadata:
-      plugin: llm-wiki
-      scenario: critical-cli-fallback-to-mcp
       mode: llm_judge
       skills:
         - wiki-query
@@ -424,7 +401,7 @@ tests:
       mode: llm_judge
       skills:
         - wiki-capture
-  - description: "[llm-wiki] Critical rule — ingest archives source and preserves backlinks (MCP preferred, mv+rewrite fallback)"
+  - description: "[llm-wiki] Critical rule — ingest archives source and preserves backlinks (CLI preferred, mv+rewrite fallback)"
     vars:
       query: "Ingest \"00 - Inbox/Great AI Debate.md\" — note that this article is already linked from two existing notes in my vault."
     assert:
@@ -432,8 +409,8 @@ tests:
         value: Plan archives the original to _System/Archive/Sources/ (or whatever paths.archive_sources resolves to)
         metric: judge/archives-to-archive-sources
       - type: llm-rubric
-        value: Uses the Obsidian MCP move_note tool when MCP is available, explicitly for backlink preservation
-        metric: judge/mcp-move-note-for-backlinks
+        value: Uses a backlink-preserving rename via the CLI when it is available, rather than a plain file move
+        metric: judge/cli-rename-for-backlinks
       - type: llm-rubric
         value: On the mv fallback, the plan rewrites inbound wikilinks to the new location (not just renames the file)
         metric: judge/mv-fallback-rewrites-links

@@ -17,19 +17,18 @@
       "id": 2,
       "eval_name": "clean-trigger-wiki-configure-activates-for-first-time-setup",
       "prompt": "I just installed the llm-wiki plugin. Set it up for my vault at ~/Documents/ObsidianVault.",
-      "expected_output": "- Route to wiki-configure skill\n- Do NOT run the bootstrap (this IS the setup)\n- Detect whether ~/.config/llm-wiki/vault already exists (reconfigure vs first-time)\n- Validate vault path is a directory\n- Inventory vault folders (Glob as fallback when MCP unavailable on first run)\n- Ask the user to map folders to required roles (inbox, projects, resources, system) and optional (areas, notes)\n- Write ~/.config/llm-wiki/vault and {vault}/_System/wiki-schema.md after confirmation\n- Seed templates only if missing — never overwrite user content\n- Tell the user to export OBSIDIAN_VAULT_PATH to enable the MCP server",
+      "expected_output": "- Route to wiki-configure skill\n- Do NOT run the bootstrap (this IS the setup)\n- Detect whether ~/.config/llm-wiki/vault already exists (reconfigure vs first-time)\n- Validate vault path is a directory\n- Inventory vault folders with Glob\n- Ask the user to map folders to required roles (inbox, projects, resources, system) and optional (areas, notes)\n- Write ~/.config/llm-wiki/vault and {vault}/_System/wiki-schema.md after confirmation\n- Seed templates only if missing — never overwrite user content",
       "_success_criteria": [
         "References the wiki-configure skill or /llm-wiki:wiki-configure command",
         "Mentions mapping folders to required roles inbox, projects, resources, system",
-        "Mentions writing the schema to _System/wiki-schema.md",
-        "Mentions setting OBSIDIAN_VAULT_PATH as an environment variable"
+        "Mentions writing the schema to _System/wiki-schema.md"
       ]
     },
     {
       "id": 3,
       "eval_name": "clean-trigger-wiki-ingest-activates-for-source-ingestion",
       "prompt": "Ingest this article into my wiki: \"00 - Inbox/The AI Layoff Trap.md\"",
-      "expected_output": "- Route to wiki-ingest skill\n- Read the bootstrap before proceeding\n- Read the source from {VAULT_PATH}/00 - Inbox/The AI Layoff Trap.md (MCP preferred, Read as fallback)\n- Produce a source-summary page under {folders.resources}/<domain>/\n- Archive the original to {paths.archive_sources} using mcp__obsidian__move_note (or Bash mv + backlink rewrite)\n- Flag any contradictions with existing wiki content\n- Append an entry to the wiki log",
+      "expected_output": "- Route to wiki-ingest skill\n- Read the bootstrap before proceeding\n- Read the source from {VAULT_PATH}/00 - Inbox/The AI Layoff Trap.md (CLI preferred, Read as fallback)\n- Produce a source-summary page under {folders.resources}/<domain>/\n- Archive the original to {paths.archive_sources} using the CLI's backlink-preserving rename (or Bash mv + backlink rewrite)\n- Flag any contradictions with existing wiki content\n- Append an entry to the wiki log",
       "_success_criteria": [
         "References the wiki-ingest skill or /llm-wiki:wiki-ingest command",
         "Plans to create a source-summary with Key Claims, Relevance, Contradictions, Original sections",
@@ -41,7 +40,7 @@
       "id": 4,
       "eval_name": "clean-trigger-wiki-lint-activates-for-a-wiki-health-check",
       "prompt": "Run a health check on my wiki — I want to know about orphans, broken links, and stale TODOs.",
-      "expected_output": "- Route to wiki-lint skill\n- Run bootstrap before proceeding\n- Inventory the wiki (mcp__obsidian__get_vault_stats or Glob+wc fallback)\n- Check for orphans (no inbound [[wikilinks]])\n- Check for broken wikilinks\n- Check the inbox folder for unprocessed items\n- Check session logs older than 30 days for open - [ ] tasks\n- Produce a structured health report",
+      "expected_output": "- Route to wiki-lint skill\n- Run bootstrap before proceeding\n- Inventory the wiki (obsidian CLI or Glob+wc fallback)\n- Check for orphans (no inbound [[wikilinks]])\n- Check for broken wikilinks\n- Check the inbox folder for unprocessed items\n- Check session logs older than 30 days for open - [ ] tasks\n- Produce a structured health report",
       "_success_criteria": [
         "References the wiki-lint skill or /llm-wiki:wiki-lint command",
         "Plans to check orphans, broken links, stale TODOs, inbox backlog",
@@ -57,17 +56,17 @@
         "Uses Python with csv or pandas",
         "Reads CSV file and sorts by revenue column",
         "Does not mention wiki-capture or wiki-ingest or wiki-query or wiki-lint or wiki-configure",
-        "Does not mention OBSIDIAN_VAULT_PATH or _System/wiki-schema.md"
+        "Does not mention _System/wiki-schema.md"
       ]
     },
     {
       "id": 6,
       "eval_name": "clean-trigger-wiki-query-activates-for-a-wiki-lookup",
       "prompt": "What does my wiki say about container networking approaches?",
-      "expected_output": "- Route to wiki-query skill\n- Run bootstrap from references/setup.md\n- Search the vault (MCP preferred, Grep as fallback)\n- Synthesize an answer combining multiple pages\n- Cite sources with [[wikilinks]] inline\n- Offer to file substantial answers back as a knowledge page",
+      "expected_output": "- Route to wiki-query skill\n- Run bootstrap from references/setup.md\n- Search the vault (CLI preferred, Grep as fallback)\n- Synthesize an answer combining multiple pages\n- Cite sources with [[wikilinks]] inline\n- Offer to file substantial answers back as a knowledge page",
       "_success_criteria": [
         "References the wiki-query skill or /llm-wiki:wiki-query command",
-        "Plans to search the vault for 'container networking' via mcp__obsidian__search_notes or Grep",
+        "Plans to search the vault for 'container networking' via obsidian search or Grep",
         "Output includes [[wikilinks]] as citations",
         "Mentions offering to file the answer as a knowledge page if substantial"
       ]
@@ -99,7 +98,7 @@
       "id": 9,
       "eval_name": "critical-rule-bootstrap-aborts-cleanly-when-vault-is-unconfigured",
       "prompt": "Capture this session to my wiki. (Assume ~/.config/llm-wiki/vault does not exist and the vault has never been configured.)",
-      "expected_output": "- Read references/setup.md\n- Discover ~/.config/llm-wiki/vault is missing\n- Abort with the message: 'llm-wiki vault not configured — run /llm-wiki:wiki-configure first.'\n- Do NOT guess a vault path\n- Do NOT create any files\n- Do NOT attempt fallback MCP probes once the bootstrap has aborted",
+      "expected_output": "- Read references/setup.md\n- Discover ~/.config/llm-wiki/vault is missing\n- Abort with the message: 'llm-wiki vault not configured — run /llm-wiki:wiki-configure first.'\n- Do NOT guess a vault path\n- Do NOT create any files\n- Do NOT attempt fallback I/O probes once the bootstrap has aborted",
       "_success_criteria": [
         "Output contains the message 'llm-wiki vault not configured' or instructs the user to run /llm-wiki:wiki-configure",
         "Does not write any files in this turn",
@@ -120,9 +119,9 @@
     },
     {
       "id": 11,
-      "eval_name": "skills-fall-back-to-file-tools-when-both-cli-and-mcp-are-unavailable",
-      "prompt": "Neither Obsidian CLI nor MCP server is available. Run /llm-wiki:wiki-query \"What deployment patterns do we use?\" using the wiki at /tmp/test-vault with a pre-populated schema.",
-      "expected_output": "- The skill probes CLI — unavailable\n- The skill probes MCP — unavailable\n- The skill uses Grep, Glob, and Read to search and read vault files directly\n- The user-facing report notes the fallback",
+      "eval_name": "skills-fall-back-to-file-tools-when-the-cli-is-unavailable",
+      "prompt": "The Obsidian CLI is not available. Run /llm-wiki:wiki-query \"What deployment patterns do we use?\" using the wiki at /tmp/test-vault with a pre-populated schema.",
+      "expected_output": "- The skill probes CLI — unavailable\n- The skill uses Grep, Glob, and Read to search and read vault files directly\n- The user-facing report notes the fallback",
       "_success_criteria": [
         "Output mentions using file tools as fallback",
         "The query uses Grep or Glob to search the vault",
@@ -132,17 +131,6 @@
     },
     {
       "id": 12,
-      "eval_name": "skills-fall-back-to-mcp-when-cli-is-unavailable",
-      "prompt": "The Obsidian CLI binary is not on PATH and `obsidian help` fails. Run /llm-wiki:wiki-query \"What is container networking?\" using the wiki at /tmp/test-vault with a pre-populated schema.",
-      "expected_output": "- The skill probes CLI availability and finds it unavailable\n- The skill falls back to MCP tools (mcp__obsidian__search_notes, mcp__obsidian__read_note)\n- The skill does not attempt any obsidian CLI commands via Bash",
-      "_success_criteria": [
-        "Output mentions using MCP or file tools as fallback",
-        "No Bash calls containing 'obsidian read' or 'obsidian search' appear",
-        "The query still produces a synthesized answer"
-      ]
-    },
-    {
-      "id": 13,
       "eval_name": "critical-rule-wiki-configure-detects-an-existing-type-index-note-and-proposes-it-as-paths-index-without-overwriting",
       "prompt": "Run wiki-configure. I already have a Home.md at my vault root with type: index in its frontmatter, custom Dataview queries, and navigation sections.",
       "expected_output": "- During the configure flow, scan the vault root for notes with type: index in frontmatter\n- Find Home.md and propose it as paths.index with a Y/n prompt\n- On accept, set INDEX_PATH to Home.md and substitute the {{INDEX_PATH}} placeholder in the schema template\n- Do NOT rewrite Home.md — the managed block will be created lazily by the first wiki-capture or wiki-ingest\n- If the user rejects, offer the _System/wiki-index.md alternative or 'skip'",
@@ -154,7 +142,7 @@
       ]
     },
     {
-      "id": 14,
+      "id": 13,
       "eval_name": "critical-rule-reconfigure-never-overwrites-user-edited-templates-or-existing-wiki-log",
       "prompt": "I ran wiki-configure a month ago and I've since edited _System/Templates/Session Log.md to match my team's format. I also have a populated _System/wiki-log.md. Re-run the configure flow to update the folder mapping without clobbering those.",
       "expected_output": "- Detect the existing configuration (reconfigure flow, not first-time)\n- Diff the existing wiki-schema.md Vault Configuration section against the proposed changes\n- Ask the user to confirm before writing the new schema\n- Never re-copy Templates/* files if they already exist — only seed missing ones\n- Never overwrite {vault}/_System/wiki-log.md if it exists\n- Report 'No changes — configuration already matches.' and exit if nothing differs",
@@ -167,7 +155,7 @@
       ]
     },
     {
-      "id": 15,
+      "id": 14,
       "eval_name": "critical-rule-wiki-configure-preserves-the-user-s-vault-path-casing-verbatim",
       "prompt": "Set up llm-wiki for my vault at /Users/me/Documents/obsidianVault (note the lowercase 'o' — that's the actual on-disk name).",
       "expected_output": "- Accept the path exactly as the user provided it: /Users/me/Documents/obsidianVault\n- Do NOT normalize or 'correct' the casing to ObsidianVault, even though 'Obsidian' is a product name\n- After validation, optionally canonicalize from the on-disk name via `find -iname` — this should equal what the user typed, so no visible change\n- Write ~/.config/llm-wiki/vault with the exact lowercase-o path\n- Write _System/wiki-schema.md with `vault_path: /Users/me/Documents/obsidianVault`\n- Wiki log entry records the vault path with the same lowercase-o casing\n- Do NOT claim to have 'fixed' anything about the casing",
@@ -179,7 +167,7 @@
       ]
     },
     {
-      "id": 16,
+      "id": 15,
       "eval_name": "critical-rule-index-regeneration-rewrites-only-content-between-markers-never-user-content-or-dataview-blocks",
       "prompt": "I've just wrapped a session where we figured out a Calico BGP peering pattern. File the session and regenerate my wiki index. My index is at Home.md and has custom Dataview queries, a Navigation section, and a Templates section — none of those should change.",
       "expected_output": "- Write the session log and any new knowledge pages first\n- Locate the <!-- llm-wiki:index:start --> and <!-- llm-wiki:index:end --> markers in Home.md\n- Rewrite ONLY the content between those markers (the managed block)\n- Leave the frontmatter, headings outside the block, Dataview code fences, and any user-authored sections verbatim\n- If markers are missing, append a fresh block at the end after a --- separator — never insert into the middle of existing content\n- Never list session logs in the index (they belong to the wiki log only)\n- Group entries by page type (Knowledge, Sources), then by domain frontmatter, alphabetically",
@@ -192,19 +180,19 @@
       ]
     },
     {
-      "id": 17,
-      "eval_name": "critical-rule-ingest-archives-source-and-preserves-backlinks-mcp-preferred-mv-rewrite-fallback",
+      "id": 16,
+      "eval_name": "critical-rule-ingest-archives-source-and-preserves-backlinks-cli-preferred-mv-rewrite-fallback",
       "prompt": "Ingest \"00 - Inbox/Great AI Debate.md\" — note that this article is already linked from two existing notes in my vault.",
-      "expected_output": "- Produce the source-summary page under {folders.resources}/<domain>/\n- Move the original source into {paths.archive_sources}\n- Prefer mcp__obsidian__move_note because it updates backlinks automatically\n- If MCP is unavailable, use Bash mv AND rewrite inbound [[wikilinks]] to point at the archive path\n- Flag any backlink that cannot be cleanly rewritten in the wiki log\n- Never leave dangling [[Great AI Debate]] references pointing at 00 - Inbox/ after archive",
+      "expected_output": "- Produce the source-summary page under {folders.resources}/<domain>/\n- Move the original source into {paths.archive_sources}\n- Prefer the CLI's backlink-preserving rename because it updates backlinks automatically\n- If the CLI is unavailable, use Bash mv AND rewrite inbound [[wikilinks]] to point at the archive path\n- Flag any backlink that cannot be cleanly rewritten in the wiki log\n- Never leave dangling [[Great AI Debate]] references pointing at 00 - Inbox/ after archive",
       "_success_criteria": [
         "Plan archives the original to _System/Archive/Sources/ (or whatever paths.archive_sources resolves to)",
-        "Uses mcp__obsidian__move_note when MCP is available, explicitly for backlink preservation",
+        "Uses a backlink-preserving rename via the CLI when it is available, rather than a plain file move",
         "On the mv fallback, the plan rewrites inbound wikilinks to the new location (not just renames the file)",
         "Wiki log entry records the archive location and any backlinks that needed rewriting"
       ]
     },
     {
-      "id": 18,
+      "id": 17,
       "eval_name": "critical-rule-wiki-lint-fix-makes-only-safe-repairs-and-never-creates-knowledge-pages",
       "prompt": "Run wiki-lint --fix on my vault. I've got several orphan session logs and some broken wikilinks pointing at concepts that don't have pages yet.",
       "expected_output": "- Link orphan pages to a relevant MOC under {folders.areas} (only if areas is configured)\n- Add missing cross-references between related pages that share tags\n- Do NOT auto-create knowledge pages for broken wikilinks — only report them\n- Do NOT modify user-authored content (non-wiki-sourced pages)\n- Append a lint-run entry to the wiki log summarizing repairs made vs issues reported",
@@ -216,10 +204,10 @@
       ]
     },
     {
-      "id": 19,
+      "id": 18,
       "eval_name": "critical-rule-wiki-query-reads-the-index-managed-block-before-falling-back-to-keyword-search",
       "prompt": "What does my wiki say about container networking?",
-      "expected_output": "- Run the setup bootstrap and resolve paths.index\n- If paths.index is non-empty, read the index file and extract the content between the managed-block markers FIRST\n- Treat pages listed in the managed block whose title or summary is relevant as priority candidates\n- Then run keyword search (mcp__obsidian__search_notes or Grep fallback) and merge results\n- If the markers are missing or the block is empty, fall through to keyword search without attempting to regenerate the block\n- Cite answers with [[wikilinks]] to the actual pages, not the index",
+      "expected_output": "- Run the setup bootstrap and resolve paths.index\n- If paths.index is non-empty, read the index file and extract the content between the managed-block markers FIRST\n- Treat pages listed in the managed block whose title or summary is relevant as priority candidates\n- Then run keyword search (obsidian search or Grep fallback) and merge results\n- If the markers are missing or the block is empty, fall through to keyword search without attempting to regenerate the block\n- Cite answers with [[wikilinks]] to the actual pages, not the index",
       "_success_criteria": [
         "Skill reads the index file before issuing keyword-search calls",
         "Priority candidates from the index are merged with (not replaced by) keyword search results",
@@ -228,7 +216,7 @@
       ]
     },
     {
-      "id": 20,
+      "id": 19,
       "eval_name": "critical-rule-skills-hard-abort-before-writing-inside-folders-protected",
       "prompt": "My vault's schema has `folders.protected: [\"_System/Templates\", \"_System/Archive/Sources\"]`. I just finished a session where I documented a new Session Log template format I want to use going forward. Capture this session and file the new template directly into `_System/Templates/Session Log.md` so it's ready for next time.",
       "expected_output": "- Run the setup bootstrap and parse `folders.protected` from the schema\n- Identify that `_System/Templates/Session Log.md` falls inside a protected path\n- Refuse the write and emit the documented abort message that references `folders.protected` and points the user at /llm-wiki:wiki-configure\n- Do NOT call any write/move/edit tool against the protected path\n- Offer the user an alternative — either pick a non-protected destination, or re-run /llm-wiki:wiki-configure to remove the path from the protected list\n- Other write steps in the workflow (session log itself, in `{folders.projects}`) may still proceed since they target non-protected paths",

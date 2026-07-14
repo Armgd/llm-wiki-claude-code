@@ -1,19 +1,14 @@
 # Codex CLI setup — llm-wiki
 
-Skills + MCP verified 2026-07-09. Hooks: not supported (see below).
+Skills verified 2026-07-09. Hooks: not supported (see below).
 
 ## Skills
 Codex auto-discovers Agent Skills from `.agents/skills/`. Clone/symlink this repo's
 `.agents/skills/` into your project (or `~/.agents/skills/` for global). No further step.
 
-## MCP (Obsidian) — optional
-Codex `config.toml` has no `${VAR}` interpolation; put the absolute vault path in `args`:
-```toml
-[mcp_servers.obsidian]
-command = "npx"
-args = ["-y", "@bitbonsai/mcpvault@latest", "/absolute/path/to/your/vault"]
-```
-Without MCP the skills fall back to the `obsidian` CLI or file tools.
+## I/O
+Install the `obsidian` CLI so the skills use the CLI tier (preferred); otherwise
+they fall back to file tools. No other wiring needed.
 
 ## Hooks — not supported
 Codex has no hook system compatible with this plugin's scripts: there is no

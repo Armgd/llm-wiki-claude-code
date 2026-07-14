@@ -5,9 +5,9 @@
 	"expected_behavior": [
 		"Route to wiki-ingest skill",
 		"Read the bootstrap before proceeding",
-		"Read the source from {VAULT_PATH}/00 - Inbox/The AI Layoff Trap.md (MCP preferred, Read as fallback)",
+		"Read the source from {VAULT_PATH}/00 - Inbox/The AI Layoff Trap.md (CLI preferred, Read as fallback)",
 		"Produce a source-summary page under {folders.resources}/<domain>/",
-		"Archive the original to {paths.archive_sources} using mcp__obsidian__move_note (or Bash mv + backlink rewrite)",
+		"Archive the original to {paths.archive_sources} using the CLI's backlink-preserving rename (or Bash mv + backlink rewrite)",
 		"Flag any contradictions with existing wiki content",
 		"Append an entry to the wiki log"
 	],

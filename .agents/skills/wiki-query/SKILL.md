@@ -2,7 +2,7 @@
 name: wiki-query
 description: "Use this skill to query an Obsidian-based LLM wiki with a natural-language question and get a synthesized answer with wikilink citations. Triggers when the user runs the wiki-query skill (Claude: `/llm-wiki:wiki-query`), asks \"what does the wiki say about X\", \"search my wiki for Y\", or similar knowledge-lookup requests. Optionally offers to file substantial answers back into the wiki as knowledge pages."
 argument-hint: "<natural-language-question>"
-allowed-tools: Read, Grep, Glob, Bash, Write, mcp__obsidian__search_notes, mcp__obsidian__read_note, mcp__obsidian__read_multiple_notes, mcp__obsidian__get_notes_info, mcp__obsidian__write_note, mcp__obsidian__list_directory, mcp__plugin_llm-wiki_obsidian__search_notes, mcp__plugin_llm-wiki_obsidian__read_note, mcp__plugin_llm-wiki_obsidian__read_multiple_notes, mcp__plugin_llm-wiki_obsidian__get_notes_info, mcp__plugin_llm-wiki_obsidian__write_note, mcp__plugin_llm-wiki_obsidian__list_directory
+allowed-tools: Read, Grep, Glob, Bash, Write
 ---
 
 # wiki-query skill (Claude: `/llm-wiki:wiki-query`)
@@ -38,17 +38,12 @@ Natural language question, e.g. `"What's my current approach to container networ
    echo "Backend: $WIKI_IO_BACKEND | qmd: $WIKI_QMD_AVAILABLE"
    ```
    - If `WIKI_IO_BACKEND` is `"cli"` → use CLI for all read/search/write operations. Consult `$SKILL_DIR/references/cli-patterns.md` for syntax.
-   - If `WIKI_IO_BACKEND` is `"mcp"` → if this agent exposes Obsidian MCP tools
-     (standalone servers expose `mcp__obsidian__*`; the Claude Code plugin-bundled
-     server exposes `mcp__plugin_llm-wiki_obsidian__*`; other agents may not have
-     them at all), probe the `list_directory` tool on the vault root and use MCP
-     if it responds. Otherwise use file tools (Read/Write/Edit/Grep/Glob). Agents
-     without MCP (e.g. Pi) always land on the CLI or file-tool tier — this is expected.
+   - If `WIKI_IO_BACKEND` is `"filetool"` → use file tools (Read/Write/Edit/Grep/Glob).
    - Commit to one I/O tier for the entire workflow. qmd availability is independent of the I/O tier.
 
 2. **Read the index first** (only if `{paths.index}` is non-empty):
    - **CLI**: `obsidian read path="{paths.index}"` via Bash — pipe and extract the managed block
-   - **MCP/File tools**: `Read {VAULT_PATH}/{paths.index}`
+   - **File tools**: `Read {VAULT_PATH}/{paths.index}`
    - Extract content between `<!-- llm-wiki:index:start -->` / `<!-- llm-wiki:index:end -->` markers.
    - Scan for pages relevant to the question. Treat these as priority candidates.
    - If markers are missing or empty, skip this step. Do not regenerate during query.
@@ -62,12 +57,11 @@ Natural language question, e.g. `"What's my current approach to container networ
    wiki_qmd_search "<question keywords>" 10
    ```
    - qmd returns ranked results with filepath and context snippet — use these paths directly
-   - For metadata-specific lookups (e.g., "all pages tagged X", frontmatter filters), still use the I/O tier's search (CLI/MCP/Grep)
+   - For metadata-specific lookups (e.g., "all pages tagged X", frontmatter filters), still use the I/O tier's search (CLI/Grep)
    - If qmd returns no results, fall back to the I/O tier search below and report: `(qmd returned no results, falling back to keyword search)`
 
    **If `WIKI_QMD_AVAILABLE` is `"false"`** (keyword search fallback):
    - **CLI**: `obsidian search query="<keywords>" limit=20` via Bash
-   - **MCP**: `mcp__obsidian__search_notes` with question keywords
    - **File tools**: `Grep` across `{VAULT_PATH}/**/*.md`
 
    **Both paths**: browse relevant MOCs under `{folders.areas}` (if configured). Merge with priority candidates from step 2, deduplicating by path.
@@ -78,7 +72,6 @@ Natural language question, e.g. `"What's my current approach to container networ
      obsidian read path="<page-path>" | head -50
      ```
      Only read in full the pages that are clearly relevant.
-   - **MCP**: `mcp__obsidian__read_multiple_notes` for bulk reads
    - **File tools**: multiple `Read` calls
    - Read up to 10 matching pages; follow `[[wikilinks]]` for deeper context
    - Note which pages are session logs vs knowledge pages vs source summaries

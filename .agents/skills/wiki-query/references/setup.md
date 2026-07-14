@@ -35,7 +35,6 @@ Every wiki operation (`/wiki-capture`, `/wiki-ingest`, `/wiki-query`, `/wiki-lin
    - wiki_source: claude-code
    - inbox_threshold: 5
    - io:
-     - preference: auto               # "cli" | "mcp" | "auto"
      - cli_path: /usr/local/bin/obsidian  # or empty
      - headless: false                 # "true" | "false"
      - qmd: false                     # "true" | "false" — qmd semantic search
@@ -59,8 +58,7 @@ Every wiki operation (`/wiki-capture`, `/wiki-ingest`, `/wiki-query`, `/wiki-lin
    - `INBOX_THRESHOLD` — used by the inbox-nudge hook only; skills can ignore
    - `folders.*` — the vault's folder role mapping. Use these everywhere you'd otherwise hardcode PARA folder names. `folders.protected` is a list (possibly empty) of vault-relative paths skills must never write/move/delete into — see §Protected paths.
    - `paths.*` — derived paths (wiki_log, templates, archive_sources, **index**)
-   - `io.preference` — which backend to try first: `"cli"`, `"mcp"`, or `"auto"` (probe at runtime). **Note**: this field is informational — the runtime probe (§Backend availability) always runs and its result is authoritative. The preference records what was detected at configure time.
-   - `io.cli_path` — path to the `obsidian` binary (empty if not installed)
+   - `io.cli_path` — path to the `obsidian` binary at configure time (empty if not installed). Informational — the runtime probe (§Backend availability) always runs and its result is authoritative. Ignore any other `io` field a legacy schema may carry (e.g. `preference`).
    - `io.headless` — whether Obsidian Headless (`ob`) is available
    - `io.qmd` — whether qmd is installed and the vault is registered as a collection. When `true`, skills prefer `qmd query` for content search.
 
@@ -73,7 +71,7 @@ Every wiki operation (`/wiki-capture`, `/wiki-ingest`, `/wiki-query`, `/wiki-lin
      - If `paths.index` is empty or missing → **skip index operations silently** (no error, no prompt).
      - If set but the file doesn't exist → create it with an empty managed block on first write (see §Index management below). Do not abort.
    - Optional: `folders.protected`. May be missing or an empty list — treat as no protection. Pre-migration schemas without this field parse as `[]`.
-   - Optional: `io.*` fields. If `io` section is missing entirely (pre-migration schemas), treat as `preference: auto`, `cli_path: ""`, `headless: false`, `qmd: false`. This ensures backward compatibility with schemas created before the CLI migration.
+   - Optional: `io.*` fields. If `io` section is missing entirely (pre-migration schemas), treat as `cli_path: ""`, `headless: false`, `qmd: false`. This ensures backward compatibility with schemas created before the CLI migration.
 
 5. **Read optional vault-root override file.**
    - Check for `{VAULT_PATH}/AGENTS.md`. If absent, fall back to `{VAULT_PATH}/CLAUDE.md` (for vaults set up before the rename).
@@ -81,9 +79,9 @@ Every wiki operation (`/wiki-capture`, `/wiki-ingest`, `/wiki-query`, `/wiki-lin
    - This file is freeform; it does NOT override the schema. Structural decisions (folder roles, page types, protected paths) come from the schema. `AGENTS.md` is for context the schema can't express.
    - If neither exists, proceed silently — this file is optional.
 
-## I/O strategy — three-tier probe
+## I/O strategy — two-tier probe
 
-llm-wiki uses a three-tier I/O strategy. At bootstrap, the skill probes backends in order and commits to the first available one for the entire workflow.
+llm-wiki uses a two-tier I/O strategy. At bootstrap, the skill probes backends in order and commits to the first available one for the entire workflow.
 
 **Tier 1 — Obsidian CLI** (preferred):
 - Runs `source "$SKILL_DIR/scripts/wiki-io.sh" && wiki_io_probe "${VAULT_PATH}"` via Bash
@@ -92,15 +90,8 @@ llm-wiki uses a three-tier I/O strategy. At bootstrap, the skill probes backends
 - **Requirement**: user has enabled CLI in Obsidian (Settings → General → Command line interface) and the Obsidian desktop app is running
 - Consult `$SKILL_DIR/references/cli-patterns.md` for command syntax
 
-**Tier 2 — Obsidian MCP** (fallback):
-- If CLI is unavailable (user hasn't enabled it, or Obsidian is not running), attempt the `list_directory` MCP tool on the vault root
-- If MCP responds, use the Obsidian MCP tools for the entire workflow
-- **Tool name prefixes vary by how the server was wired**: a standalone MCP config exposes `mcp__obsidian__<tool>`; the server bundled with the Claude Code plugin exposes `mcp__plugin_llm-wiki_obsidian__<tool>`. The tool basenames (`list_directory`, `read_note`, …) are identical — probe whichever prefix is present. Everywhere this document writes `mcp__obsidian__<tool>`, read it as "the `<tool>` tool of whichever Obsidian MCP server is connected".
-- **Advantage**: works without the Obsidian desktop app — reads vault files via the bundled MCP server
-- **Requirement**: `OBSIDIAN_VAULT_PATH` env var set before Claude Code started
-
-**Tier 3 — File tools** (last resort):
-- If both CLI and MCP are unavailable, use Read/Write/Edit/Grep/Glob directly on vault files
+**Tier 2 — File tools** (fallback):
+- If CLI is unavailable (user hasn't enabled it, or Obsidian is not running), use Read/Write/Edit/Grep/Glob directly on vault files
 - **Advantage**: always works — no external dependencies
 - **Caveat**: no wikilink resolution, no backlink-safe moves, no template engine
 
@@ -112,10 +103,10 @@ Obsidian Headless (`ob`) is a **sync service**, not a note I/O backend. It keeps
 
 - **Requirement**: Obsidian account + Obsidian Sync subscription + `ob login`
 - **What it does**: syncs vault files to/from Obsidian's servers. Useful for server/CI environments where the desktop app can't run.
-- **What it does NOT do**: it has no `read`, `search`, `create`, or `move` commands. It is not a substitute for the CLI or MCP.
-- **How it helps llm-wiki**: on a server, Headless keeps the vault files fresh via Sync, and the plugin uses MCP or file tools (Tier 2/3) to read/write those files.
+- **What it does NOT do**: it has no `read`, `search`, `create`, or `move` commands. It is not a substitute for the CLI.
+- **How it helps llm-wiki**: on a server, Headless keeps the vault files fresh via Sync, and the plugin uses file tools (Tier 2) to read/write those files.
 
-The `io.headless` schema field records whether `ob` was detected at configure time. Skills do not branch on it — they branch on CLI/MCP/filetool only.
+The `io.headless` schema field records whether `ob` was detected at configure time. Skills do not branch on it — they branch on CLI/filetool only.
 
 ## Backend availability — detect and branch
 
@@ -133,32 +124,30 @@ echo "Backend: $WIKI_IO_BACKEND"
 
 `SKILL_DIR` and `VAULT_PATH` were resolved outside the shell (bootstrap steps), so substitute their literal values — Bash steps run in separate shells and share no variables.
 
-The script sets `WIKI_IO_BACKEND` to `"cli"` or `"mcp"` (meaning "try MCP next").
+The script sets `WIKI_IO_BACKEND` to `"cli"` or `"filetool"`.
 
 - If `WIKI_IO_BACKEND` is `"cli"` → use CLI for all operations below.
-- If `WIKI_IO_BACKEND` is `"mcp"` → attempt one cheap MCP call (the `list_directory` tool on the vault root, whichever prefix is present — see the naming note in Tier 2 above).
-  - If MCP responds → use MCP for all operations.
-  - If MCP fails → downgrade to file tools for all operations.
+- If `WIKI_IO_BACKEND` is `"filetool"` → use file tools for all operations.
 
-### Three-tier fallback table
+### Two-tier fallback table
 
-| Operation | CLI (Tier 1) | MCP (Tier 2) | File tools (Tier 3) |
-|---|---|---|---|
-| **List directory** | `obsidian search query="path:folder/"` via Bash | `mcp__obsidian__list_directory` | `Glob '{VAULT_PATH}/<folder>/*'` |
-| **Search notes** | `obsidian search query="..." limit=N` via Bash | `mcp__obsidian__search_notes` | `Grep` over `{VAULT_PATH}/**/*.md` |
-| **Read note** | `obsidian read path="..."` via Bash (pipe to `head -N` for context control) | `mcp__obsidian__read_note` | `Read {VAULT_PATH}/<path>` |
-| **Read multiple** | Multiple `obsidian read` via Bash loop | `mcp__obsidian__read_multiple_notes` | Multiple `Read` calls |
-| **Create note** | `obsidian create path="..." content="..." silent` via Bash | `mcp__obsidian__write_note` | `Write {VAULT_PATH}/<path>` |
-| **Append to note** | `obsidian append path="..." content="..."` via Bash | `mcp__obsidian__patch_note` | `Edit {VAULT_PATH}/<path>` |
-| **Read frontmatter** | `obsidian property:read path="..." name="..."` via Bash | `mcp__obsidian__get_frontmatter` | `Read` first ~30 lines, parse YAML |
-| **Set frontmatter** | `obsidian property:set path="..." name="..." value="..."` via Bash | `mcp__obsidian__update_frontmatter` | `Edit` on the `---` YAML block |
-| **Move note** | `obsidian eval "await app.fileManager.renameFile(...)"` via Bash (preserves backlinks) | `mcp__obsidian__move_note` | Bash `mv` + Grep/Edit to rewrite inbound `[[wikilinks]]` |
-| **Move file** | Same eval pattern | `mcp__obsidian__move_file` | Bash `mv` + check references |
-| **Vault stats** | `obsidian tags counts` via Bash | `mcp__obsidian__get_vault_stats` | `Glob '**/*.md'` + `wc -l` via Bash |
-| **Broken links** | `obsidian unresolved` via Bash | — (manual check) | Grep for `[[` + resolve each |
-| **Version diff** | `obsidian diff file="..." from=N to=N` via Bash | — | — (not available) |
-| **Note info** | `obsidian read` + parse | `mcp__obsidian__get_notes_info` | `Read` + `Glob` |
-| **Delete note** | `obsidian eval "await app.vault.trash(...)"` | `mcp__obsidian__delete_note` | Bash `rm` (check inbound links first) |
+| Operation | CLI (Tier 1) | File tools (Tier 2) |
+|---|---|---|
+| **List directory** | `obsidian search query="path:folder/"` via Bash | `Glob '{VAULT_PATH}/<folder>/*'` |
+| **Search notes** | `obsidian search query="..." limit=N` via Bash | `Grep` over `{VAULT_PATH}/**/*.md` |
+| **Read note** | `obsidian read path="..."` via Bash (pipe to `head -N` for context control) | `Read {VAULT_PATH}/<path>` |
+| **Read multiple** | Multiple `obsidian read` via Bash loop | Multiple `Read` calls |
+| **Create note** | `obsidian create path="..." content="..." silent` via Bash | `Write {VAULT_PATH}/<path>` |
+| **Append to note** | `obsidian append path="..." content="..."` via Bash | `Edit {VAULT_PATH}/<path>` |
+| **Read frontmatter** | `obsidian property:read path="..." name="..."` via Bash | `Read` first ~30 lines, parse YAML |
+| **Set frontmatter** | `obsidian property:set path="..." name="..." value="..."` via Bash | `Edit` on the `---` YAML block |
+| **Move note** | `obsidian eval "await app.fileManager.renameFile(...)"` via Bash (preserves backlinks) | Bash `mv` + Grep/Edit to rewrite inbound `[[wikilinks]]` |
+| **Move file** | Same eval pattern | Bash `mv` + check references |
+| **Vault stats** | `obsidian tags counts` via Bash | `Glob '**/*.md'` + `wc -l` via Bash |
+| **Broken links** | `obsidian unresolved` via Bash | Grep for `[[` + resolve each |
+| **Version diff** | `obsidian diff file="..." from=N to=N` via Bash | — (not available) |
+| **Note info** | `obsidian read` + parse | `Read` + `Glob` |
+| **Delete note** | `obsidian eval "await app.vault.trash(...)"` | Bash `rm` (check inbound links first) |
 
 ### qmd search probe (optional)
 
@@ -169,7 +158,7 @@ wiki_qmd_probe "${VAULT_PATH}"
 echo "qmd: $WIKI_QMD_AVAILABLE"
 ```
 
-qmd is a **search augmentation**, not an I/O tier. It does not affect which backend (CLI/MCP/filetool) is used for reads and writes. When `WIKI_QMD_AVAILABLE` is `"true"`, skills use `wiki_qmd_search` for content discovery instead of keyword search. When `"false"`, skills use the existing search path (Obsidian CLI search, MCP search, or Grep).
+qmd is a **search augmentation**, not an I/O tier. It does not affect which backend (CLI/filetool) is used for reads and writes. When `WIKI_QMD_AVAILABLE` is `"true"`, skills use `wiki_qmd_search` for content discovery instead of keyword search. When `"false"`, skills use the existing search path (Obsidian CLI search or Grep).
 
 **Zero-result fallback:** If `qmd query` returns no results for a given query, fall back to existing search (Obsidian search/Grep) for that query. Report once: `(qmd returned no results, falling back to keyword search)`.
 
@@ -190,7 +179,7 @@ obsidian search query="wiki-source:" | wc -l
 obsidian read path="long-page.md" | head -50
 ```
 
-This is the primary advantage of CLI over MCP: you control how much content enters the context window.
+This is the primary advantage of the CLI tier: you control how much content enters the context window.
 
 ## Index management
 
@@ -209,8 +198,8 @@ If `paths.index` is non-empty, every operation that creates or updates a `knowle
 1. Read `{VAULT_PATH}/{paths.index}`. If the file doesn't exist, create it with just the managed block (no other content).
 2. Locate the markers. If either marker is missing, **append** a fresh block to the end of the file preceded by a `---` separator. Do not insert into the middle of existing content.
 3. Gather all wiki-sourced pages by reading frontmatter across the vault:
-   - Prefer `mcp__obsidian__search_notes` with `searchFrontmatter: true` on `wiki-source`.
-   - Fallback: `Grep -l "^wiki-source:" {VAULT_PATH}/**/*.md`, then `Read` the frontmatter of each match.
+   - **CLI**: `obsidian search query="wiki-source:" limit=200` via Bash, piped to keep only the matched paths (§CLI context management pattern). Then read all frontmatter in a single batched call: `for f in {matched paths}; do echo "== $f"; sed -n '/^---$/,/^---$/p' "{VAULT_PATH}/$f"; done`.
+   - **File tools**: `Grep -l "^wiki-source:" {VAULT_PATH}/**/*.md`, then `Read` the frontmatter of each match.
    - Keep only pages where `type` is `knowledge` or `source-summary` (exclude `session-log`, `system`, `enrichment`).
 4. Group by `type`, then by `domain` (alphabetical). Within each group, sort by title alphabetical.
 5. For each page, derive a one-line summary:
@@ -238,7 +227,7 @@ If `paths.index` is non-empty, every operation that creates or updates a `knowle
 
 If either group is empty, emit the heading with an `_(none yet)_` line so the structure is stable.
 
-**Tool choice**: Use `Read` to get the current file, compute the new block in memory, then `Write` the full file (preferred) or `Edit` the marker-bounded substring. Never use `mcp__obsidian__write_note` on an index file unless you've read the whole file first — it will replace unrelated content.
+**Tool choice**: Use `Read` to get the current file, compute the new block in memory, then `Write` the full file (preferred) or `Edit` the marker-bounded substring.
 
 **Rule**: Never update the index inside a transaction that also touches the target page. Update the target page first, confirm it landed, then update the index. This way a half-completed operation can be re-run safely (the index-rebuild is idempotent).
 

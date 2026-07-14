@@ -5,12 +5,11 @@
 > since 2026-06-18 it no longer serves consumer accounts (Google AI Pro/Ultra
 > and free tiers). It keeps working only for Gemini Code Assist
 > Standard/Enterprise licenses and paid API keys. **New setups should use
-> `SETUP-antigravity.md`** — Antigravity retains Agent Skills and Hooks, and
-> `agy plugin import gemini` migrates an existing MCP config.
+> `SETUP-antigravity.md`** — Antigravity retains Agent Skills and Hooks.
 > Migration guide: <https://antigravity.google/docs/cli/gcli-migration>.
 > The instructions below apply only where Gemini CLI still runs (enterprise).
 
-Skills + MCP verified 2026-07-09. Hooks: not supported (see below).
+Skills verified 2026-07-09. Hooks: not supported (see below).
 
 ## Skills
 Gemini auto-discovers Agent Skills from `.agents/skills/` (or `~/.agents/skills/`).
@@ -20,18 +19,9 @@ Gemini reads `GEMINI.md` by default; this repo no longer ships one (Antigravity,
 its successor, reads `AGENTS.md` natively). Set `context.fileName` in settings to
 include `AGENTS.md`, or create your own one-line `GEMINI.md` containing `@AGENTS.md`.
 
-## MCP (Obsidian) — optional
-`settings.json` supports `${VAR}`:
-```json
-{
-  "mcpServers": {
-    "obsidian": {
-      "command": "npx",
-      "args": ["-y", "@bitbonsai/mcpvault@latest", "${OBSIDIAN_VAULT_PATH}"]
-    }
-  }
-}
-```
+## I/O
+Install the `obsidian` CLI so the skills use the CLI tier (preferred); otherwise
+they fall back to file tools. No other wiring needed.
 
 ## Hooks — not supported
 Gemini CLI has no hook system compatible with this plugin's scripts: no
