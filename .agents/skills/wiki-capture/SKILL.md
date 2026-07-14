@@ -22,7 +22,7 @@ Read `$SKILL_DIR/references/setup.md` in full and follow it before proceeding. I
 
 ## Arguments
 
-Optional project name, e.g. `kota` (Claude: `/llm-wiki:wiki-capture kota`). If omitted, infer from the current working directory or ask the user.
+Optional project name, e.g. `my-awesome-project` (Claude: `/llm-wiki:wiki-capture my-awesome-project`). If omitted, infer from the current working directory or ask the user.
 
 ## Workflow
 
