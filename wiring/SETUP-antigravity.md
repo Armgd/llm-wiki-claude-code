@@ -1,30 +1,37 @@
 # Antigravity CLI (agy) setup — llm-wiki
 
 Antigravity CLI is Google's successor to Gemini CLI (consumer Gemini CLI stopped
-being served on 2026-06-18 — see `SETUP-gemini.md`). Written against the public
-docs and community references as of 2026-07-14; not yet verified end-to-end
-against a live install. Docs: <https://antigravity.google/docs/cli/overview>,
-migration guide: <https://antigravity.google/docs/cli/gcli-migration>.
+being served on 2026-06-18 — see `SETUP-gemini.md`). Skills discovery verified
+2026-07-14 against agy 1.1.2 (hooks still unverified — see below). Docs:
+<https://antigravity.google/docs/cli/overview>, migration guide:
+<https://antigravity.google/docs/cli/gcli-migration>.
 
 ## Skills
-Antigravity auto-discovers Agent Skills from the workspace's `.agents/skills/`
-(this repo's layout works as-is) and globally from
-`~/.gemini/antigravity-cli/skills/`. Clone/symlink this repo's `.agents/skills/`
-into your project, or copy the five `wiki-*` dirs into the global path.
-`agy inspect` lists the configuration files it loaded — use it to confirm the
-skills and `AGENTS.md` were picked up.
+Despite what the bundled `agy-customizations` docs claim, agy 1.1.2 does NOT
+load workspace skills: `.agents/skills/` and an explicit `.agents/skills.json`
+manifest are both ignored, trusted workspace or not (tested headless `-p`).
+Only global discovery works — symlink the five skill dirs into
+`~/.gemini/config/skills/`:
+
+```sh
+mkdir -p ~/.gemini/config/skills
+for s in wiki-capture wiki-configure wiki-ingest wiki-lint wiki-query; do
+  ln -sfn /ABS/PATH/TO/llm-wiki/.agents/skills/$s ~/.gemini/config/skills/$s
+done
+```
+
+There is no `agy inspect` subcommand (despite earlier references). To confirm
+discovery, run:
+`agy -p "Without running any commands, list the Agent Skills available to you"`
+— the five `wiki-*` names should appear alongside the built-in
+`antigravity-guide`.
 
 ## Instructions
 Antigravity reads `AGENTS.md` natively. No shim needed.
 
-## MCP (Obsidian) — optional
-- Migrating from Gemini CLI: `agy plugin import gemini` carries your MCP server
-  registrations over, including an existing `obsidian` entry.
-- Fresh setup: use `/mcp` inside `agy` to register the server. Env-var
-  interpolation is undocumented — pass the absolute vault path:
-  `npx -y @bitbonsai/mcpvault@latest /absolute/path/to/your/vault`
-
-Without MCP the skills fall back to the `obsidian` CLI or file tools.
+## I/O
+Install the `obsidian` CLI so the skills use the CLI tier (preferred); otherwise
+they fall back to file tools. No other wiring needed.
 
 ## Hooks — best-effort adapter
 Antigravity has a compatible hook system (`PreToolUse`, `PostToolUse`,
